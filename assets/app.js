@@ -10,7 +10,8 @@ const state = {
   selectedTeacherId: null,
   genderFilter: "",
   teacherViewMode: "report",
-  adminDrawerView: "summary"
+  adminDrawerView: "summary",
+  activityFeed: []
 };
 
 function api(path, options = {}) {
@@ -50,6 +51,116 @@ function showToast(message) {
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 2500);
 }
+
+const ACTIVITY_STORAGE_KEY = "practitioner_activity_feed";
+
+function isDesktopSidebar() {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+function readStoredActivities() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ACTIVITY_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredActivities(items) {
+  localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify((items || []).slice(0, 18)));
+}
+
+function pushActivity(message) {
+  if (!message) return;
+  const entry = { id: Date.now() + Math.random(), message, createdAt: new Date().toISOString() };
+  const next = [entry, ...readStoredActivities()].slice(0, 18);
+  saveStoredActivities(next);
+  state.activityFeed = next;
+}
+
+function relativeTimeArabic(value) {
+  const diff = Math.max(0, Date.now() - new Date(value).getTime());
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "الآن";
+  if (minutes < 60) return `قبل ${minutes} د`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `قبل ${hours} س`;
+  const days = Math.floor(hours / 24);
+  return `قبل ${days} يوم`;
+}
+
+function buildDerivedActivities(teachers = []) {
+  const items = [];
+  teachers.slice(0, 10).forEach((teacher) => {
+    const parts = Object.entries(teacher.recitations || {}).filter(([, done]) => done).map(([part]) => Number(part));
+    if (parts.length) {
+      items.push({ id: `${teacher.id}-part`, message: `${teacher.name} اجتاز جزء رقم ${Math.max(...parts)}`, createdAt: teacher.created_at || new Date().toISOString() });
+    }
+    const attendanceDays = Object.entries(teacher.attendance || {}).filter(([, row]) => row?.present).map(([day]) => Number(day));
+    if (attendanceDays.length) {
+      items.push({ id: `${teacher.id}-attendance`, message: `${teacher.name} سجل حضور اليوم ${Math.max(...attendanceDays)}`, createdAt: teacher.created_at || new Date().toISOString() });
+    }
+    const tasks = Object.entries(teacher.tasks || {}).filter(([, done]) => done).map(([task]) => Number(task));
+    if (tasks.length) {
+      items.push({ id: `${teacher.id}-task`, message: `${teacher.name} أنجز المهمة الأدائية رقم ${Math.max(...tasks)}`, createdAt: teacher.created_at || new Date().toISOString() });
+    }
+  });
+  return items.slice(0, 8);
+}
+
+function renderActivityFeed() {
+  const container = document.getElementById("activity-feed");
+  if (!container) return;
+  const merged = [...readStoredActivities(), ...buildDerivedActivities(state.teachers)]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .filter((item, index, arr) => arr.findIndex((x) => x.message === item.message) === index)
+    .slice(0, 6);
+
+  state.activityFeed = merged;
+
+  if (!merged.length) {
+    container.innerHTML = emptyState("ستظهر هنا آخر التحديثات البسيطة عند تسجيل الحضور أو الأجزاء أو إضافة الأسماء.");
+    return;
+  }
+
+  container.innerHTML = merged.map((item) => `
+    <div class="flex items-start justify-between gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-soft">
+      <div class="flex items-start gap-3">
+        <span class="mt-1 inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-500"></span>
+        <p class="text-sm font-medium leading-7 text-slate-700">${item.message}</p>
+      </div>
+      <span class="whitespace-nowrap text-xs font-bold text-slate-400">${relativeTimeArabic(item.createdAt)}</span>
+    </div>
+  `).join("");
+}
+
+function renderPublicActivityFeed() {
+  const container = document.getElementById("public-activity-feed");
+  if (!container) return;
+  const items = readStoredActivities().slice(0, 5);
+  if (!items.length) {
+    container.innerHTML = emptyState("ستظهر هنا آخر التحديثات العامة بعد بدء استخدام المنصة.");
+    return;
+  }
+  container.innerHTML = items.map((item) => `
+    <div class="flex items-start justify-between gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-soft">
+      <div class="flex items-start gap-3">
+        <span class="mt-1 inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-brand-500"></span>
+        <p class="text-sm font-medium leading-7 text-slate-700">${item.message}</p>
+      </div>
+      <span class="whitespace-nowrap text-xs font-bold text-slate-400">${relativeTimeArabic(item.createdAt)}</span>
+    </div>
+  `).join("");
+}
+
+function teacherNameById(teacherId) {
+  return state.teachers.find((item) => item.id === teacherId)?.name
+    || state.adminNamedReports.male.find((item) => item.id === teacherId)?.name
+    || state.adminNamedReports.female.find((item) => item.id === teacherId)?.name
+    || "أحد المعلمين";
+}
+
 
 function metricClass(value) {
   const safe = Number(value) || 0;
@@ -316,6 +427,7 @@ function renderAdminNamedReports() {
 }
 
 function openSidebar() {
+  if (isDesktopSidebar()) return;
   const sidebar = document.getElementById("app-sidebar");
   const backdrop = document.getElementById("sidebar-backdrop");
   const toggleBtn = document.getElementById("sidebar-toggle-btn");
@@ -327,6 +439,7 @@ function openSidebar() {
 }
 
 function closeSidebar() {
+  if (isDesktopSidebar()) return;
   const sidebar = document.getElementById("app-sidebar");
   const backdrop = document.getElementById("sidebar-backdrop");
   const toggleBtn = document.getElementById("sidebar-toggle-btn");
@@ -337,7 +450,26 @@ function closeSidebar() {
   toggleBtn?.setAttribute("aria-expanded", "false");
 }
 
+function syncSidebarForViewport() {
+  const sidebar = document.getElementById("app-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  const toggleBtn = document.getElementById("sidebar-toggle-btn");
+  if (!sidebar || !backdrop) return;
+  if (isDesktopSidebar()) {
+    sidebar.classList.remove("translate-x-full", "pointer-events-none");
+    backdrop.classList.add("pointer-events-none", "opacity-0");
+    sidebar.setAttribute("aria-hidden", "false");
+    toggleBtn?.setAttribute("aria-expanded", "true");
+  } else {
+    sidebar.classList.add("translate-x-full", "pointer-events-none");
+    backdrop.classList.add("pointer-events-none", "opacity-0");
+    sidebar.setAttribute("aria-hidden", "true");
+    toggleBtn?.setAttribute("aria-expanded", "false");
+  }
+}
+
 function toggleSidebar() {
+  if (isDesktopSidebar()) return;
   const sidebar = document.getElementById("app-sidebar");
   if (!sidebar) return;
   if (sidebar.classList.contains("translate-x-full")) {
@@ -390,6 +522,13 @@ function renderTeacherList() {
 
   if (!state.teachers.length) {
     container.innerHTML = emptyState("لا توجد بيانات مطابقة حاليًا.");
+    return;
+  }
+
+  if (state.user?.role === "admin") {
+    title.textContent = "التقارير العامة";
+    if (note) note.textContent = "عرض عام فقط بدون تعديل على بيانات المعلمين.";
+    container.innerHTML = reportTableHtml(state.teachers.slice().sort((a, b) => a.name.localeCompare(b.name, "ar")), "تقرير عام للأسماء المعروضة");
     return;
   }
 
@@ -665,6 +804,7 @@ async function loadDashboardData({ showSkeleton = true } = {}) {
     state.teachers = teachersResponse.teachers || [];
     renderTeacherViewTabs();
     renderTeacherList();
+    renderActivityFeed();
     return;
   }
 
@@ -677,6 +817,7 @@ async function loadDashboardData({ showSkeleton = true } = {}) {
   renderSummaryGrid(state.summary);
   renderTeacherViewTabs();
   renderTeacherList();
+  renderActivityFeed();
 }
 
 function refreshVisibleViews() {
@@ -686,6 +827,7 @@ function refreshVisibleViews() {
     renderTeacherList();
     renderAdminNamedReports();
     updateAdminDrawerView();
+    renderActivityFeed();
   });
 }
 
@@ -798,38 +940,45 @@ async function initAppPage() {
     return;
   }
 
+  syncSidebarForViewport();
+  window.addEventListener("resize", syncSidebarForViewport);
+
   document.getElementById("role-badge").textContent = currentRoleLabel(state.user);
   document.getElementById("welcome-title").textContent = `مرحبًا ${state.user.name}`;
   document.getElementById("welcome-subtitle").textContent =
     state.user.role === "admin"
-      ? "يمكنك إدارة المستخدمين ومراجعة التقارير الكاملة وحذف البيانات عند الحاجة."
+      ? "واجهة الإدارة مخصصة للتقارير العامة والمتابعة فقط."
       : state.user.role === "supervisor"
         ? "يمكنك إدارة التابعين لك وتسجيل الحضور والاختبارات والمهام والنهائي."
         : "يمكنك إضافة المعلمين التابعين لك وتسجيل الأجزاء فقط، ولن تظهر لك الحالات المجازة.";
 
   if (state.user.role === "admin") {
     document.getElementById("admin-sidebar-menu")?.classList.remove("hidden");
-    document.getElementById("supervisor-select-wrap")?.classList.remove("hidden-el");
-    document.getElementById("main-summary-section")?.classList.add("hidden-el");
-    document.getElementById("summary-circular")?.classList.add("hidden-el");
-    document.getElementById("welcome-subtitle").textContent = "يمكنك التنقل بين المؤشرات والبيانات التفصيلية وإدارة المستخدمين من الشريط الجانبي.";
+    document.getElementById("sidebar-add-teacher-btn")?.classList.add("hidden");
+    document.getElementById("teacher-management-section")?.classList.add("hidden-el");
+    document.getElementById("teacher-view-section")?.classList.add("hidden-el");
+    document.getElementById("welcome-subtitle").textContent = "لوحة الإدارة تعرض المؤشرات والبيانات التفصيلية فقط بدون تعديل مباشر على بيانات المعلمين.";
     state.adminDrawerView = "summary";
     document.getElementById("admin-drawer")?.classList.remove("hidden");
     updateAdminDrawerView();
+  }
+
+  if (state.user.role === "supervisor") {
+    document.getElementById("main-summary-filter-wrap")?.classList.add("hidden");
   }
 
   if (state.user.role === "reader") {
     document.getElementById("reader-select-wrap")?.classList.add("hidden-el");
     document.getElementById("summary-grid")?.closest("section")?.classList.add("hidden-el");
     document.getElementById("summary-circular")?.classList.add("hidden-el");
-    document.getElementById("gender-filter")?.closest("div")?.classList.add("hidden-el");
+    document.getElementById("main-summary-actions")?.classList.add("hidden-el");
     document.getElementById("teacher-view-section")?.classList.add("hidden-el");
     document.getElementById("teacher-form-title").textContent = state.user.gender === "female" ? "إضافة معلمة تابعة لك" : "إضافة معلم تابع لك";
     document.getElementById("teacher-form-note").textContent = "سيتم ربط الاسم بك مباشرة كمقرئ/مقرئة.";
     document.getElementById("teacher-name-label").textContent = state.user.gender === "female" ? "اسم المعلمة" : "اسم المعلم";
     document.getElementById("teacher-submit-btn").textContent = state.user.gender === "female" ? "إضافة معلمة" : "إضافة معلم";
     document.getElementById("teacher-list-title").textContent = state.user.gender === "female" ? "المعلمات التابعات لك" : "المعلمون التابعون لك";
-  } else {
+  } else if (state.user.role !== "admin") {
     document.getElementById("teacher-view-section")?.classList.remove("hidden-el");
   }
 
@@ -838,6 +987,7 @@ async function initAppPage() {
 
   await loadReferenceUsers();
   await loadDashboardData({ showSkeleton: true });
+  renderActivityFeed();
 
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("practitioner_token");
@@ -859,6 +1009,7 @@ async function initAppPage() {
   document.getElementById("sidebar-refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
     if (state.user.role === "admin") await loadReferenceUsers();
+    renderActivityFeed();
     showToast("تم تحديث البيانات");
   });
 
@@ -871,6 +1022,7 @@ async function initAppPage() {
   document.getElementById("admin-refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
     if (state.user.role === "admin") await loadReferenceUsers();
+    renderActivityFeed();
     showToast("تم تحديث البيانات");
   });
 
@@ -889,6 +1041,7 @@ async function initAppPage() {
   document.getElementById("refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
     if (state.user.role === "admin") await loadReferenceUsers();
+    renderActivityFeed();
     showToast("تم تحديث البيانات");
   });
 
@@ -917,6 +1070,7 @@ async function initAppPage() {
     const body = Object.fromEntries(formData.entries());
     try {
       await api("teachers-create", { method: "POST", body: JSON.stringify(body) });
+      pushActivity(`${state.user.name} أضاف ${state.user.gender === "female" ? "معلمة" : "معلمًا"}: ${body.name}`);
       window.location.reload();
     } catch (error) {
       showToast(error.message);
@@ -933,6 +1087,7 @@ async function initAppPage() {
       await api("users-create", { method: "POST", body: JSON.stringify(body) });
       event.currentTarget.reset();
       await loadReferenceUsers();
+      renderActivityFeed();
       showToast("تم إنشاء المستخدم");
     } catch (error) {
       showToast(error.message);
@@ -973,11 +1128,13 @@ async function initAppPage() {
     try {
       if (action === "toggle-part") {
         const partNumber = Number(button.dataset.part);
+        const wasActive = state.teachers.find((item) => item.id === teacherId)?.recitations?.[partNumber] || false;
         await api("recitations-toggle", { method: "POST", body: JSON.stringify({ teacher_id: teacherId, part_number: partNumber }) });
         applyTeacherMutation(teacherId, (teacher) => {
           teacher.recitations = teacher.recitations || {};
           teacher.recitations[partNumber] = !teacher.recitations[partNumber];
         });
+        if (!wasActive) pushActivity(`${teacherNameById(teacherId)} اجتاز جزء رقم ${partNumber}`);
         refreshVisibleViews();
         showToast("تم تحديث الجزء");
       }
@@ -985,23 +1142,27 @@ async function initAppPage() {
       if (action === "toggle-attendance") {
         const day = Number(button.dataset.day);
         const field = button.dataset.kind;
+        const wasPresent = state.teachers.find((item) => item.id === teacherId)?.attendance?.[day]?.[field] || false;
         await api("attendance-update", { method: "POST", body: JSON.stringify({ teacher_id: teacherId, day, field }) });
         applyTeacherMutation(teacherId, (teacher) => {
           teacher.attendance = teacher.attendance || {};
           teacher.attendance[day] = teacher.attendance[day] || { present: false, pre_test: false, post_test: false };
           teacher.attendance[day][field] = !teacher.attendance[day][field];
         });
+        if (field === "present" && !wasPresent) pushActivity(`${teacherNameById(teacherId)} سجل حضور اليوم ${day}`);
         refreshVisibleViews();
         showToast("تم تحديث اليوم");
       }
 
       if (action === "toggle-task") {
         const taskNumber = Number(button.dataset.task);
+        const wasDone = state.teachers.find((item) => item.id === teacherId)?.tasks?.[taskNumber] || false;
         await api("tasks-update", { method: "POST", body: JSON.stringify({ teacher_id: teacherId, task_number: taskNumber }) });
         applyTeacherMutation(teacherId, (teacher) => {
           teacher.tasks = teacher.tasks || {};
           teacher.tasks[taskNumber] = !teacher.tasks[taskNumber];
         });
+        if (!wasDone) pushActivity(`${teacherNameById(teacherId)} أنجز المهمة الأدائية رقم ${taskNumber}`);
         refreshVisibleViews();
         showToast("تم تحديث المهمة");
       }
@@ -1012,6 +1173,7 @@ async function initAppPage() {
         applyTeacherMutation(teacherId, (teacher) => {
           teacher.is_graduated = !teacher.is_graduated;
         });
+        if (!targetTeacher?.is_graduated) pushActivity(`${teacherNameById(teacherId)} تم اعتماده مجازًا`);
         refreshVisibleViews();
         showToast("تم تحديث حالة الإجازة");
       }
@@ -1034,6 +1196,7 @@ async function initAppPage() {
         applyTeacherMutation(teacherId, (teacher) => {
           teacher.final_score = value;
         });
+        pushActivity(`${teacherNameById(teacherId)} سجل الاختبار النهائي بنسبة ${Math.round(value)}٪`);
         refreshVisibleViews();
         showToast("تم حفظ النهائي");
       }
@@ -1052,6 +1215,7 @@ async function initAppPage() {
     try {
       await api("users-delete", { method: "POST", body: JSON.stringify({ user_id: button.dataset.user }) });
       await loadReferenceUsers();
+      renderActivityFeed();
       showToast("تم حذف المستخدم");
     } catch (error) {
       showToast(error.message);
@@ -1123,11 +1287,13 @@ async function initPublicPage() {
           </div>
         </div>
       `;
+      renderPublicActivityFeed();
     } catch (error) {
       const html = `<div class="rounded-3xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">${error.message}</div>`;
       male.innerHTML = html;
       female.innerHTML = html;
       comparison.innerHTML = html;
+      renderPublicActivityFeed();
     }
   }
 
