@@ -187,6 +187,7 @@ function summarizeTeachers(teachers) {
     totalTeachers: safeList.length,
     graduatedCount: safeList.filter((teacher) => teacher.is_graduated).length,
     averageParts: average("partsPercent"),
+    averageAttendance: average("attendancePercent"),
     averageTests: average("testsPercent"),
     averageTasks: average("tasksPercent"),
     averageFinalExam: average("finalExamPercent"),
@@ -214,41 +215,79 @@ function preserveViewport(callback) {
   requestAnimationFrame(() => window.scrollTo({ top, behavior: "auto" }));
 }
 
+function renderMetricCards(gridId, cards = [], columnsClass = "sm:grid-cols-2 xl:grid-cols-4") {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.className = `mt-5 grid gap-4 ${columnsClass}`;
+  grid.innerHTML = cards.map((item) => `
+    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft fade-in">
+      <div class="metric-label">${item.label}</div>
+      <div class="mt-3 text-3xl font-extrabold">${item.value}</div>
+      <div class="mt-4">${progressHtml(item.progressLabel || "المؤشر", item.progress)}</div>
+    </div>
+  `).join("");
+}
+
 function renderSummaryGrid(summary) {
-  const renderCards = (gridId) => {
-    const grid = document.getElementById(gridId);
-    if (!grid || !summary) return;
-    const cards = [
-      { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
-      { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
-      { label: "متوسط الأداء", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
-      { label: "متوسط النهائي", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
-    ];
+  const overallCards = state.user?.role === "admin"
+    ? [
+        { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
+        { label: "إجمالي المعلمين", value: state.adminNamedReports.male.length, progress: summarizeTeachers(state.adminNamedReports.male).averageFinalResult },
+        { label: "إجمالي المعلمات", value: state.adminNamedReports.female.length, progress: summarizeTeachers(state.adminNamedReports.female).averageFinalResult },
+        { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
+        { label: "متوسط الأداء العام", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
+        { label: "متوسط النهائي العام", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
+      ]
+    : [
+        { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
+        { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
+        { label: "متوسط الأداء", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
+        { label: "متوسط النهائي", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
+      ];
 
-    grid.innerHTML = cards.map((item) => `
-      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft fade-in">
-        <div class="metric-label">${item.label}</div>
-        <div class="mt-3 text-3xl font-extrabold">${item.value}</div>
-        <div class="mt-4">${progressHtml("المؤشر", item.progress)}</div>
-      </div>
-    `).join("");
-  };
+  renderMetricCards(
+    "summary-grid",
+    overallCards,
+    state.user?.role === "admin" ? "sm:grid-cols-2 xl:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-4"
+  );
 
-  const renderCircular = (wrapId) => {
-    const circularWrap = document.getElementById(wrapId);
-    if (!circularWrap || !summary) return;
+  const circularWrap = document.getElementById("summary-circular");
+  if (circularWrap && summary && state.user?.role !== "admin") {
     circularWrap.innerHTML = `
       ${circularHtml("الأجزاء", summary.averageParts)}
       ${circularHtml("الاختبارات", summary.averageTests)}
       ${circularHtml("المهام", summary.averageTasks)}
     `;
-  };
-
-  renderCards("summary-grid");
-  renderCards("admin-summary-grid");
-  renderCircular("summary-circular");
-  renderCircular("admin-summary-circular");
+  }
 }
+
+function renderAdminSplitSummaries() {
+  const maleSummary = summarizeTeachers(state.adminNamedReports.male || []);
+  const femaleSummary = summarizeTeachers(state.adminNamedReports.female || []);
+
+  renderMetricCards("admin-male-summary-grid", [
+    { label: "عدد المعلمين", value: maleSummary.totalTeachers, progress: maleSummary.averageFinalResult },
+    { label: "المجازون", value: maleSummary.graduatedCount, progress: maleSummary.averageParts, progressLabel: "متوسط الأجزاء" },
+    { label: "متوسط الحضور", value: formatPercent(maleSummary.averageAttendance || 0), progress: maleSummary.averageAttendance || 0 },
+    { label: "متوسط الاختبارات", value: formatPercent(maleSummary.averageTests), progress: maleSummary.averageTests },
+    { label: "متوسط المهام", value: formatPercent(maleSummary.averageTasks), progress: maleSummary.averageTasks },
+    { label: "متوسط النهائي", value: formatPercent(maleSummary.averageFinalExam), progress: maleSummary.averageFinalExam },
+    { label: "متوسط النتيجة", value: formatPercent(maleSummary.averageFinalResult), progress: maleSummary.averageFinalResult },
+    { label: "متوسط الأجزاء", value: formatPercent(maleSummary.averageParts), progress: maleSummary.averageParts }
+  ], "sm:grid-cols-2");
+
+  renderMetricCards("admin-female-summary-grid", [
+    { label: "عدد المعلمات", value: femaleSummary.totalTeachers, progress: femaleSummary.averageFinalResult },
+    { label: "المجازات", value: femaleSummary.graduatedCount, progress: femaleSummary.averageParts, progressLabel: "متوسط الأجزاء" },
+    { label: "متوسط الحضور", value: formatPercent(femaleSummary.averageAttendance || 0), progress: femaleSummary.averageAttendance || 0 },
+    { label: "متوسط الاختبارات", value: formatPercent(femaleSummary.averageTests), progress: femaleSummary.averageTests },
+    { label: "متوسط المهام", value: formatPercent(femaleSummary.averageTasks), progress: femaleSummary.averageTasks },
+    { label: "متوسط النهائي", value: formatPercent(femaleSummary.averageFinalExam), progress: femaleSummary.averageFinalExam },
+    { label: "متوسط النتيجة", value: formatPercent(femaleSummary.averageFinalResult), progress: femaleSummary.averageFinalResult },
+    { label: "متوسط الأجزاء", value: formatPercent(femaleSummary.averageParts), progress: femaleSummary.averageParts }
+  ], "sm:grid-cols-2");
+}
+
 
 function currentRoleLabel(user) {
   if (!user) return "";
@@ -290,39 +329,64 @@ function reportTableHtml(teachers, label) {
   return `
     <div class="space-y-4">
       <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">${label}</div>
-      <div class="overflow-x-auto rounded-3xl border border-slate-200">
-        <table class="min-w-[1100px] w-full divide-y divide-slate-200 text-sm">
+
+      <div class="grid gap-4 lg:hidden">
+        ${teachers.map((teacher, index) => `
+          <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-xs font-bold text-slate-400">#${index + 1}</div>
+                <h3 class="mt-1 text-base font-extrabold text-slate-900">${teacher.name}</h3>
+              </div>
+              <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
+            </div>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">المشرف:</span> ${teacher.supervisor_name || "—"}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">المقرئ:</span> ${teacher.reader_name || "—"}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الأجزاء:</span> ${formatPercent(teacher.metrics?.partsPercent)}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الحضور:</span> ${formatPercent(teacher.metrics?.attendancePercent)}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الاختبارات:</span> ${formatPercent(teacher.metrics?.testsPercent)}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">المهام:</span> ${formatPercent(teacher.metrics?.tasksPercent)}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">النهائي:</span> ${formatPercent(teacher.metrics?.finalExamPercent)}</div>
+              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الحالة:</span> ${teacher.is_graduated ? "مجاز / مجازة" : "نشط"}</div>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+
+      <div class="hidden lg:block overflow-x-auto rounded-3xl border border-slate-200">
+        <table class="w-full table-fixed divide-y divide-slate-200 text-sm">
           <thead class="bg-slate-50 text-slate-600">
             <tr>
-              <th class="px-4 py-3 text-right font-bold">#</th>
-              <th class="px-4 py-3 text-right font-bold">الاسم</th>
-              <th class="px-4 py-3 text-right font-bold">المشرف</th>
-              <th class="px-4 py-3 text-right font-bold">المقرئ</th>
-              <th class="px-4 py-3 text-right font-bold">الأجزاء</th>
-              <th class="px-4 py-3 text-right font-bold">الحضور</th>
-              <th class="px-4 py-3 text-right font-bold">الاختبارات</th>
-              <th class="px-4 py-3 text-right font-bold">المهام</th>
-              <th class="px-4 py-3 text-right font-bold">النهائي</th>
-              <th class="px-4 py-3 text-right font-bold">النتيجة النهائية</th>
-              <th class="px-4 py-3 text-right font-bold">الحالة</th>
+              <th class="w-12 px-3 py-3 text-right font-bold">#</th>
+              <th class="w-[16%] px-3 py-3 text-right font-bold">الاسم</th>
+              <th class="w-[13%] px-3 py-3 text-right font-bold">المشرف</th>
+              <th class="w-[13%] px-3 py-3 text-right font-bold">المقرئ</th>
+              <th class="px-3 py-3 text-right font-bold">الأجزاء</th>
+              <th class="px-3 py-3 text-right font-bold">الحضور</th>
+              <th class="px-3 py-3 text-right font-bold">الاختبارات</th>
+              <th class="px-3 py-3 text-right font-bold">المهام</th>
+              <th class="px-3 py-3 text-right font-bold">النهائي</th>
+              <th class="px-3 py-3 text-right font-bold">النتيجة</th>
+              <th class="w-28 px-3 py-3 text-right font-bold">الحالة</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 bg-white">
             ${teachers.map((teacher, index) => `
               <tr>
-                <td class="px-4 py-3 font-semibold text-slate-500">${index + 1}</td>
-                <td class="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">${teacher.name}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${teacher.supervisor_name || "—"}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${teacher.reader_name || "—"}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.partsPercent)}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.attendancePercent)}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.testsPercent)}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.tasksPercent)}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
-                <td class="px-4 py-3 whitespace-nowrap">
+                <td class="px-3 py-3 align-top font-semibold text-slate-500">${index + 1}</td>
+                <td class="px-3 py-3 align-top font-bold text-slate-900 break-words">${teacher.name}</td>
+                <td class="px-3 py-3 align-top break-words">${teacher.supervisor_name || "—"}</td>
+                <td class="px-3 py-3 align-top break-words">${teacher.reader_name || "—"}</td>
+                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.partsPercent)}</td>
+                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.attendancePercent)}</td>
+                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.testsPercent)}</td>
+                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.tasksPercent)}</td>
+                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
+                <td class="px-3 py-3 align-top">
                   <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
+                <td class="px-3 py-3 align-top">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -331,6 +395,7 @@ function reportTableHtml(teachers, label) {
     </div>
   `;
 }
+
 
 function renderAdminNamedReports() {
   const maleEl = document.getElementById("admin-male-report-table");
@@ -659,6 +724,8 @@ async function loadAdminNamedReports({ showSkeleton = false } = {}) {
   state.adminNamedReports.male = maleResponse.teachers || [];
   state.adminNamedReports.female = femaleResponse.teachers || [];
   renderAdminNamedReports();
+  renderAdminSplitSummaries();
+  if (state.summary) renderSummaryGrid(state.summary);
 }
 
 async function loadDashboardData({ showSkeleton = true } = {}) {
@@ -699,6 +766,7 @@ function refreshVisibleViews() {
     renderTeacherViewTabs();
     renderTeacherList();
     renderAdminNamedReports();
+    renderAdminSplitSummaries();
   });
 }
 
@@ -822,6 +890,7 @@ async function initAppPage() {
 
   if (state.user.role === "admin") {
     document.getElementById("admin-main-section")?.classList.remove("hidden-el");
+    document.getElementById("admin-split-summary-section")?.classList.remove("hidden-el");
     document.getElementById("teacher-list-section")?.classList.add("hidden-el");
     document.getElementById("teacher-view-section")?.classList.add("hidden-el");
     document.getElementById("teacher-management-section")?.classList.add("hidden-el");
