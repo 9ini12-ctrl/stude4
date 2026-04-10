@@ -26,7 +26,6 @@
       }
     };
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body class="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
@@ -165,7 +164,7 @@
         <section class="glass-card rounded-[2rem] p-5 md:p-6">
           <div class="section-title">
             <h2>بيان المعلمين والمعلمات</h2>
-            <span class="text-xs text-slate-500">تقارير تفصيلية للعرض والتصدير</span>
+            <span class="text-xs text-slate-500">تقارير تفصيلية للعرض والتصدير بصيغة CSV</span>
           </div>
 
           <div class="mt-5 grid gap-6 xl:grid-cols-2">
@@ -175,7 +174,7 @@
                   <div class="text-xs font-bold text-slate-400">بيان تفصيلي</div>
                   <div class="text-lg font-extrabold text-slate-900">المعلمون</div>
                 </div>
-                <button type="button" data-export-target="admin-male-export-area" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير PDF</button>
+                <button type="button" data-export-target="male" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير CSV</button>
               </div>
               <div class="grid gap-3 md:grid-cols-[1fr_220px]">
                 <input id="admin-male-search" type="search" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" placeholder="بحث باسم المعلم" />
@@ -195,7 +194,7 @@
                   <div class="text-xs font-bold text-slate-400">بيان تفصيلي</div>
                   <div class="text-lg font-extrabold text-slate-900">المعلمات</div>
                 </div>
-                <button type="button" data-export-target="admin-female-export-area" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير PDF</button>
+                <button type="button" data-export-target="female" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير CSV</button>
               </div>
               <div class="grid gap-3 md:grid-cols-[1fr_220px]">
                 <input id="admin-female-search" type="search" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" placeholder="بحث باسم المعلمة" />

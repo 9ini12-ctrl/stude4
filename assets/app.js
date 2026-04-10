@@ -330,63 +330,39 @@ function reportTableHtml(teachers, label) {
     <div class="space-y-4">
       <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">${label}</div>
 
-      <div class="grid gap-4 lg:hidden">
-        ${teachers.map((teacher, index) => `
-          <article class="rounded-3xl border border-slate-200 bg-white p-4 shadow-soft">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <div class="text-xs font-bold text-slate-400">#${index + 1}</div>
-                <h3 class="mt-1 text-base font-extrabold text-slate-900">${teacher.name}</h3>
-              </div>
-              <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
-            </div>
-            <div class="mt-4 grid gap-3 sm:grid-cols-2">
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">المشرف:</span> ${teacher.supervisor_name || "—"}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">المقرئ:</span> ${teacher.reader_name || "—"}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الأجزاء:</span> ${formatPercent(teacher.metrics?.partsPercent)}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الحضور:</span> ${formatPercent(teacher.metrics?.attendancePercent)}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الاختبارات:</span> ${formatPercent(teacher.metrics?.testsPercent)}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">المهام:</span> ${formatPercent(teacher.metrics?.tasksPercent)}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">النهائي:</span> ${formatPercent(teacher.metrics?.finalExamPercent)}</div>
-              <div class="rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span class="font-bold">الحالة:</span> ${teacher.is_graduated ? "مجاز / مجازة" : "نشط"}</div>
-            </div>
-          </article>
-        `).join("")}
-      </div>
-
-      <div class="hidden lg:block overflow-x-auto rounded-3xl border border-slate-200">
-        <table class="w-full table-fixed divide-y divide-slate-200 text-sm">
+      <div class="overflow-x-auto rounded-3xl border border-slate-200 bg-white">
+        <table class="min-w-[1120px] divide-y divide-slate-200 text-sm">
           <thead class="bg-slate-50 text-slate-600">
             <tr>
-              <th class="w-12 px-3 py-3 text-right font-bold">#</th>
-              <th class="w-[16%] px-3 py-3 text-right font-bold">الاسم</th>
-              <th class="w-[13%] px-3 py-3 text-right font-bold">المشرف</th>
-              <th class="w-[13%] px-3 py-3 text-right font-bold">المقرئ</th>
-              <th class="px-3 py-3 text-right font-bold">الأجزاء</th>
-              <th class="px-3 py-3 text-right font-bold">الحضور</th>
-              <th class="px-3 py-3 text-right font-bold">الاختبارات</th>
-              <th class="px-3 py-3 text-right font-bold">المهام</th>
-              <th class="px-3 py-3 text-right font-bold">النهائي</th>
-              <th class="px-3 py-3 text-right font-bold">النتيجة</th>
-              <th class="w-28 px-3 py-3 text-right font-bold">الحالة</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">#</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الاسم</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">المشرف</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">المقرئ</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الأجزاء</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الحضور</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الاختبارات</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">المهام</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">النهائي</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">النتيجة</th>
+              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الحالة</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 bg-white">
             ${teachers.map((teacher, index) => `
-              <tr>
-                <td class="px-3 py-3 align-top font-semibold text-slate-500">${index + 1}</td>
-                <td class="px-3 py-3 align-top font-bold text-slate-900 break-words">${teacher.name}</td>
-                <td class="px-3 py-3 align-top break-words">${teacher.supervisor_name || "—"}</td>
-                <td class="px-3 py-3 align-top break-words">${teacher.reader_name || "—"}</td>
-                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.partsPercent)}</td>
-                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.attendancePercent)}</td>
-                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.testsPercent)}</td>
-                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.tasksPercent)}</td>
-                <td class="px-3 py-3 align-top">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
-                <td class="px-3 py-3 align-top">
+              <tr class="hover:bg-slate-50/80">
+                <td class="px-3 py-3 align-middle font-semibold text-slate-500 whitespace-nowrap">${index + 1}</td>
+                <td class="px-3 py-3 align-middle font-bold text-slate-900 whitespace-nowrap">${teacher.name}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.supervisor_name || "—"}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.reader_name || "—"}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.partsPercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.attendancePercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.testsPercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.tasksPercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">
                   <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
                 </td>
-                <td class="px-3 py-3 align-top">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -845,21 +821,64 @@ async function initIndexPage() {
   });
 }
 
-async function exportAdminPdf(targetId = "admin-male-export-area") {
-  const area = document.getElementById(targetId);
-  if (!area) return;
-  if (typeof html2pdf === "undefined") {
-    showToast("تعذر تحميل أداة التصدير");
+function csvEscape(value) {
+  const safe = value == null ? "" : String(value);
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename, rows) {
+  const csvContent = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportAdminCsv(targetKey = "male") {
+  const filters = state.adminReportFilters[targetKey] || { search: "", sort: "name_asc" };
+  const list = filterAndSortTeachers(state.adminNamedReports[targetKey] || [], filters.search, filters.sort);
+  if (!list.length) {
+    showToast("لا توجد بيانات للتصدير");
     return;
   }
-  await html2pdf().set({
-    margin: 8,
-    filename: `${targetId}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
-  }).from(area).save();
+
+  const header = [
+    "م",
+    "الاسم",
+    "المشرف",
+    "المقرئ",
+    "نسبة الأجزاء",
+    "نسبة الحضور",
+    "نسبة الاختبارات",
+    "نسبة المهام",
+    "درجة النهائي",
+    "النتيجة النهائية",
+    "الحالة"
+  ];
+
+  const rows = [header, ...list.map((teacher, index) => [
+    index + 1,
+    teacher.name || "",
+    teacher.supervisor_name || "",
+    teacher.reader_name || "",
+    formatPercent(teacher.metrics?.partsPercent),
+    formatPercent(teacher.metrics?.attendancePercent),
+    formatPercent(teacher.metrics?.testsPercent),
+    formatPercent(teacher.metrics?.tasksPercent),
+    formatPercent(teacher.metrics?.finalExamPercent),
+    formatPercent(teacher.metrics?.finalResult),
+    teacher.is_graduated ? "مجاز / مجازة" : "نشط"
+  ])];
+
+  const filename = targetKey === "female" ? "بيان-المعلمات.csv" : "بيان-المعلمين.csv";
+  downloadCsv(filename, rows);
 }
+
 
 async function initAppPage() {
   const logoutBtn = document.getElementById("logout-btn");
@@ -957,7 +976,7 @@ async function initAppPage() {
 
 
   document.querySelectorAll("[data-export-target]").forEach((button) => {
-    button.addEventListener("click", () => exportAdminPdf(button.dataset.exportTarget));
+    button.addEventListener("click", () => exportAdminCsv(button.dataset.exportTarget));
   });
 
   document.getElementById("refresh-btn")?.addEventListener("click", async () => {
