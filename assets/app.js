@@ -7,7 +7,8 @@ const state = {
   readers: [],
   supervisors: [],
   selectedTeacherId: null,
-  genderFilter: ""
+  genderFilter: "",
+  teacherViewMode: "report"
 };
 
 function api(path, options = {}) {
@@ -242,6 +243,26 @@ function currentRoleLabel(user) {
   return user.role;
 }
 
+function currentViewMeta() {
+  const map = {
+    report: { title: "التقرير", note: "عرض المؤشرات والنسب المئوية لجميع الأسماء." },
+    attendance: { title: "الحضور", note: "قائمة الأسماء مع متابعة حضور 12 يومًا." },
+    tests: { title: "الاختبارات القبلية / البعدية", note: "قائمة الأسماء مع الاختبارات اليومية القبلية والبعدية." },
+    tasks: { title: "المهام الأدائية", note: "قائمة الأسماء مع المهام الأدائية الثمانية." },
+    final: { title: "الاختبار النهائي", note: "قائمة الأسماء مع إدخال درجة النهائي." }
+  };
+  return map[state.teacherViewMode] || map.report;
+}
+
+function renderTeacherViewTabs() {
+  document.querySelectorAll('[data-view-mode]').forEach((button) => {
+    const isActive = button.dataset.viewMode === state.teacherViewMode;
+    button.className = `rounded-2xl border px-4 py-2 text-sm font-bold transition ${isActive
+      ? "border-slate-900 bg-slate-900 text-white"
+      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}`;
+  });
+}
+
 function renderTeacherList() {
   const container = document.getElementById("teachers-list");
   const title = document.getElementById("teacher-list-title");
@@ -256,25 +277,18 @@ function renderTeacherList() {
   if (state.user?.role === "reader") {
     title.textContent = "المعلمون التابعون لك";
     if (note) note.textContent = "يظهر الاسم والأجزاء فقط.";
-  } else {
-    title.textContent = "المعلمون / المعلمات";
-    if (note) note.textContent = "نسب، تقدم، وتحديثات حسب الدور";
-  }
 
-  container.innerHTML = state.teachers.map((teacher) => {
-    const canManage = state.user.role === "admin" || state.user.role === "supervisor";
-    const isReader = state.user.role === "reader";
-    const recitationButtons = Array.from({ length: 30 }).map((_, index) => {
-      const part = index + 1;
-      const isActive = teacher.recitations?.[part] || false;
-      return `
-        <button data-action="toggle-part" data-teacher="${teacher.id}" data-part="${part}" class="part-btn ${isActive ? "active" : ""} rounded-xl border border-slate-200 px-2 py-2 text-xs font-bold ${isReader ? "" : "pointer-events-none opacity-80"}">
-          ${part}
-        </button>
-      `;
-    }).join("");
+    container.innerHTML = state.teachers.map((teacher) => {
+      const recitationButtons = Array.from({ length: 30 }).map((_, index) => {
+        const part = index + 1;
+        const isActive = teacher.recitations?.[part] || false;
+        return `
+          <button data-action="toggle-part" data-teacher="${teacher.id}" data-part="${part}" class="part-btn ${isActive ? "active" : ""} rounded-xl border border-slate-200 px-2 py-2 text-xs font-bold">
+            ${part}
+          </button>
+        `;
+      }).join("");
 
-    if (isReader) {
       return `
         <article class="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-soft fade-in">
           <div class="mb-4 text-lg font-extrabold text-slate-900">${teacher.name}</div>
@@ -283,55 +297,67 @@ function renderTeacherList() {
           </div>
         </article>
       `;
-    }
+    }).join("");
+    return;
+  }
 
-    const attendanceButtons = Array.from({ length: 12 }).map((_, index) => {
-      const day = index + 1;
+  const meta = currentViewMeta();
+  title.textContent = `قائمة ${meta.title}`;
+  if (note) note.textContent = meta.note;
+
+  container.innerHTML = state.teachers.map((teacher, index) => {
+    const canManage = state.user.role === "admin" || state.user.role === "supervisor";
+    const attendanceDays = Array.from({ length: 12 }).map((_, idx) => {
+      const day = idx + 1;
       const row = teacher.attendance?.[day] || {};
       return `
-        <div class="rounded-2xl border border-slate-200 p-2 text-center">
-          <div class="text-[11px] font-bold text-slate-500">يوم ${day}</div>
-          <div class="mt-2 flex flex-wrap justify-center gap-1">
-            <button data-action="toggle-attendance" data-kind="present" data-teacher="${teacher.id}" data-day="${day}" class="grid-toggle ${row.present ? "active" : ""} rounded-lg border border-slate-200 px-2 py-1 text-[11px] ${canManage ? "" : "pointer-events-none opacity-70"}">حضور</button>
-            <button data-action="toggle-attendance" data-kind="pre_test" data-teacher="${teacher.id}" data-day="${day}" class="grid-toggle ${row.pre_test ? "active" : ""} rounded-lg border border-slate-200 px-2 py-1 text-[11px] ${canManage ? "" : "pointer-events-none opacity-70"}">قبلي</button>
-            <button data-action="toggle-attendance" data-kind="post_test" data-teacher="${teacher.id}" data-day="${day}" class="grid-toggle ${row.post_test ? "active" : ""} rounded-lg border border-slate-200 px-2 py-1 text-[11px] ${canManage ? "" : "pointer-events-none opacity-70"}">بعدي</button>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    const taskButtons = Array.from({ length: 8 }).map((_, index) => {
-      const task = index + 1;
-      const active = teacher.tasks?.[task] || false;
-      return `
-        <button data-action="toggle-task" data-teacher="${teacher.id}" data-task="${task}" class="grid-toggle ${active ? "active" : ""} rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold ${canManage ? "" : "pointer-events-none opacity-70"}">
-          مهمة ${task}
+        <button data-action="toggle-attendance" data-kind="present" data-teacher="${teacher.id}" data-day="${day}" class="grid-toggle ${row.present ? "active" : ""} rounded-xl border border-slate-200 px-2 py-2 text-xs font-bold ${canManage ? "" : "pointer-events-none opacity-70"}">
+          ${day}
         </button>
       `;
     }).join("");
 
-    return `
-      <article class="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-soft fade-in">
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div class="space-y-3">
-            <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-lg font-extrabold">${teacher.name}</h3>
-              ${teacher.is_graduated ? '<span class="badge badge-success">مجاز / مجازة</span>' : '<span class="badge badge-neutral">نشط</span>'}
-              <span class="badge ${teacher.gender === "female" ? "badge-danger" : "badge-neutral"}">${teacher.gender === "female" ? "معلمة" : "معلم"}</span>
-            </div>
-            <div class="text-sm text-slate-500">
-              <div>المشرف: <span class="font-semibold text-slate-700">${teacher.supervisor_name || "—"}</span></div>
-              <div>المقرئ: <span class="font-semibold text-slate-700">${teacher.reader_name || "—"}</span></div>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button data-action="select-teacher" data-teacher="${teacher.id}" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">تفاصيل</button>
-            ${canManage ? `<button data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء المجاز" : "اعتماد مجاز"}</button>` : ""}
-            ${(state.user.role === "admin" || state.user.role === "supervisor") ? `<button data-action="delete-teacher" data-teacher="${teacher.id}" class="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">حذف</button>` : ""}
-          </div>
-        </div>
+    const preDays = Array.from({ length: 12 }).map((_, idx) => {
+      const day = idx + 1;
+      const row = teacher.attendance?.[day] || {};
+      return `
+        <button data-action="toggle-attendance" data-kind="pre_test" data-teacher="${teacher.id}" data-day="${day}" class="grid-toggle ${row.pre_test ? "active" : ""} rounded-xl border border-slate-200 px-2 py-2 text-xs font-bold ${canManage ? "" : "pointer-events-none opacity-70"}">
+          ${day}
+        </button>
+      `;
+    }).join("");
 
-        <div class="mt-5 grid gap-4 md:grid-cols-2">
+    const postDays = Array.from({ length: 12 }).map((_, idx) => {
+      const day = idx + 1;
+      const row = teacher.attendance?.[day] || {};
+      return `
+        <button data-action="toggle-attendance" data-kind="post_test" data-teacher="${teacher.id}" data-day="${day}" class="grid-toggle ${row.post_test ? "active" : ""} rounded-xl border border-slate-200 px-2 py-2 text-xs font-bold ${canManage ? "" : "pointer-events-none opacity-70"}">
+          ${day}
+        </button>
+      `;
+    }).join("");
+
+    const taskButtons = Array.from({ length: 8 }).map((_, idx) => {
+      const task = idx + 1;
+      const active = teacher.tasks?.[task] || false;
+      return `
+        <button data-action="toggle-task" data-teacher="${teacher.id}" data-task="${task}" class="grid-toggle ${active ? "active" : ""} rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold ${canManage ? "" : "pointer-events-none opacity-70"}">
+          ${task}
+        </button>
+      `;
+    }).join("");
+
+    const actionButtons = `
+      <div class="flex flex-wrap gap-2">
+        ${canManage ? `<button data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-xs font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء المجاز" : "اعتماد مجاز"}</button>` : ""}
+        ${(state.user.role === "admin" || state.user.role === "supervisor") ? `<button data-action="delete-teacher" data-teacher="${teacher.id}" class="rounded-2xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">حذف</button>` : ""}
+      </div>
+    `;
+
+    let content = "";
+    if (state.teacherViewMode === "report") {
+      content = `
+        <div class="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
           <div class="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
             ${progressHtml("الأجزاء", teacher.metrics.partsPercent)}
             ${progressHtml("الحضور", teacher.metrics.attendancePercent)}
@@ -340,34 +366,82 @@ function renderTeacherList() {
             ${progressHtml("النهائي", teacher.metrics.finalExamPercent)}
             ${progressHtml("النتيجة النهائية", teacher.metrics.finalResult)}
           </div>
-
-          <div class="space-y-4">
-            <div class="rounded-3xl border border-slate-200 p-4">
-              <div class="mb-3 text-sm font-bold text-slate-800">الأجزاء (1 - 30)</div>
-              <div class="grid grid-cols-5 gap-2 sm:grid-cols-6">${recitationButtons}</div>
+          <div class="space-y-3">
+            <div class="rounded-3xl border border-slate-200 p-4 text-sm text-slate-600">
+              <div>المشرف: <span class="font-bold text-slate-900">${teacher.supervisor_name || "—"}</span></div>
+              <div class="mt-2">المقرئ: <span class="font-bold text-slate-900">${teacher.reader_name || "—"}</span></div>
             </div>
-
-            ${canManage ? `
-              <div class="rounded-3xl border border-slate-200 p-4">
-                <div class="mb-3 text-sm font-bold text-slate-800">الحضور والاختبارات اليومية</div>
-                <div class="grid gap-2 xl:grid-cols-2">${attendanceButtons}</div>
-              </div>
-
-              <div class="rounded-3xl border border-slate-200 p-4">
-                <div class="mb-3 text-sm font-bold text-slate-800">المهام الأدائية</div>
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">${taskButtons}</div>
-
-                <div class="mt-4">
-                  <label class="mb-2 block text-sm font-semibold">درجة الاختبار النهائي</label>
-                  <div class="flex gap-2">
-                    <input type="number" min="0" max="100" value="${Number(teacher.final_score || 0)}" data-final-input="${teacher.id}" class="soft-ring w-full rounded-2xl border border-slate-200 px-4 py-3" />
-                    <button data-action="save-final" data-teacher="${teacher.id}" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-700">حفظ</button>
-                  </div>
-                </div>
-              </div>
-            ` : ""}
+            ${actionButtons}
           </div>
         </div>
+      `;
+    }
+
+    if (state.teacherViewMode === "attendance") {
+      content = `
+        <div class="rounded-3xl border border-slate-200 p-4">
+          <div class="mb-3 text-sm font-bold text-slate-800">الحضور من اليوم 1 إلى 12</div>
+          <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-12">${attendanceDays}</div>
+          <div class="mt-4">${actionButtons}</div>
+        </div>
+      `;
+    }
+
+    if (state.teacherViewMode === "tests") {
+      content = `
+        <div class="grid gap-4 xl:grid-cols-2">
+          <div class="rounded-3xl border border-slate-200 p-4">
+            <div class="mb-3 text-sm font-bold text-slate-800">الاختبار القبلي</div>
+            <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-4">${preDays}</div>
+          </div>
+          <div class="rounded-3xl border border-slate-200 p-4">
+            <div class="mb-3 text-sm font-bold text-slate-800">الاختبار البعدي</div>
+            <div class="grid grid-cols-4 gap-2 sm:grid-cols-6 xl:grid-cols-4">${postDays}</div>
+          </div>
+          <div class="xl:col-span-2">${actionButtons}</div>
+        </div>
+      `;
+    }
+
+    if (state.teacherViewMode === "tasks") {
+      content = `
+        <div class="rounded-3xl border border-slate-200 p-4">
+          <div class="mb-3 text-sm font-bold text-slate-800">المهام الأدائية الثمانية</div>
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">${taskButtons}</div>
+          <div class="mt-4">${actionButtons}</div>
+        </div>
+      `;
+    }
+
+    if (state.teacherViewMode === "final") {
+      content = `
+        <div class="rounded-3xl border border-slate-200 p-4">
+          <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <label class="text-sm font-bold text-slate-800">درجة الاختبار النهائي</label>
+            <input type="number" min="0" max="100" value="${Number(teacher.final_score || 0)}" data-final-input="${teacher.id}" class="soft-ring w-full rounded-2xl border border-slate-200 px-4 py-3 xl:max-w-xs" />
+            <button data-action="save-final" data-teacher="${teacher.id}" class="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-700">حفظ</button>
+          </div>
+          <div class="mt-4">${actionButtons}</div>
+        </div>
+      `;
+    }
+
+    return `
+      <article class="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-soft fade-in">
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-sm font-extrabold text-white">${index + 1}</span>
+            <div>
+              <h3 class="text-lg font-extrabold">${teacher.name}</h3>
+              <div class="mt-1 flex flex-wrap gap-2">
+                ${teacher.is_graduated ? '<span class="badge badge-success">مجاز / مجازة</span>' : '<span class="badge badge-neutral">نشط</span>'}
+                <span class="badge ${teacher.gender === "female" ? "badge-danger" : "badge-neutral"}">${teacher.gender === "female" ? "معلمة" : "معلم"}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-sm text-slate-500">${state.teacherViewMode === "report" ? formatPercent(teacher.metrics.finalResult) : ""}</div>
+        </div>
+        ${content}
       </article>
     `;
   }).join("");
@@ -483,6 +557,7 @@ async function loadDashboardData() {
     state.summary = null;
     state.teachers = teachersResponse.teachers || [];
     state.selectedTeacherId = state.teachers[0]?.id || null;
+    renderTeacherViewTabs();
     renderTeacherList();
     renderDetailPanel();
     return;
@@ -502,6 +577,7 @@ async function loadDashboardData() {
   }
 
   renderSummaryGrid(state.summary);
+  renderTeacherViewTabs();
   renderTeacherList();
   renderDetailPanel();
 }
@@ -533,9 +609,6 @@ async function initAppPage() {
         ? "يمكنك إدارة التابعين لك وتسجيل الحضور والاختبارات والمهام والنهائي."
         : "يمكنك إضافة المعلمين التابعين لك وتسجيل الأجزاء فقط، ولن تظهر لك الحالات المجازة.";
 
-  if (["admin", "supervisor", "reader"].includes(state.user.role)) {
-    document.getElementById("teacher-management-section")?.classList.remove("hidden-el");
-  }
   if (state.user.role === "admin") {
     document.getElementById("users-section")?.classList.remove("hidden-el");
     document.getElementById("supervisor-select-wrap")?.classList.remove("hidden-el");
@@ -546,14 +619,14 @@ async function initAppPage() {
     document.getElementById("summary-grid")?.closest("section")?.classList.add("hidden-el");
     document.getElementById("summary-circular")?.classList.add("hidden-el");
     document.getElementById("gender-filter")?.closest("div")?.classList.add("hidden-el");
-    document.getElementById("detail-panel")?.closest("section")?.classList.add("hidden-el");
+    document.getElementById("teacher-view-section")?.classList.add("hidden-el");
     document.getElementById("teacher-form-title").textContent = state.user.gender === "female" ? "إضافة معلمة تابعة لك" : "إضافة معلم تابع لك";
     document.getElementById("teacher-form-note").textContent = "سيتم ربط الاسم بك مباشرة كمقرئ/مقرئة.";
     document.getElementById("teacher-name-label").textContent = state.user.gender === "female" ? "اسم المعلمة" : "اسم المعلم";
     document.getElementById("teacher-submit-btn").textContent = state.user.gender === "female" ? "إضافة معلمة" : "إضافة معلم";
     document.getElementById("teacher-list-title").textContent = state.user.gender === "female" ? "المعلمات التابعات لك" : "المعلمون التابعون لك";
-    const notesSection = document.querySelectorAll("aside .glass-card")[1];
-    notesSection?.classList.add("hidden-el");
+  } else {
+    document.getElementById("teacher-view-section")?.classList.remove("hidden-el");
   }
 
   document.getElementById("gender-filter").value = state.genderFilter;
@@ -565,6 +638,16 @@ async function initAppPage() {
     localStorage.removeItem("practitioner_token");
     state.token = "";
     window.location.href = "/";
+  });
+
+  document.getElementById("sidebar-add-teacher-btn")?.addEventListener("click", () => {
+    const section = document.getElementById("teacher-management-section");
+    if (!section) return;
+    section.classList.toggle("hidden-el");
+  });
+
+  document.getElementById("sidebar-refresh-btn")?.addEventListener("click", () => {
+    window.location.reload();
   });
 
   document.getElementById("refresh-btn")?.addEventListener("click", async () => {
@@ -579,6 +662,14 @@ async function initAppPage() {
     await loadDashboardData();
   });
 
+  document.getElementById("teacher-view-tabs")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-view-mode]");
+    if (!button) return;
+    state.teacherViewMode = button.dataset.viewMode;
+    renderTeacherViewTabs();
+    renderTeacherList();
+  });
+
   document.getElementById("teacher-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -588,12 +679,7 @@ async function initAppPage() {
         method: "POST",
         body: JSON.stringify(body)
       });
-      event.currentTarget.reset();
-      populatePeopleSelectors();
-      await loadDashboardData();
-      showToast(state.user?.role === "reader"
-        ? (state.user.gender === "female" ? "تمت إضافة المعلمة وربطها بك" : "تمت إضافة المعلم وربطه بك")
-        : "تمت إضافة المعلم / المعلمة");
+      window.location.reload();
     } catch (error) {
       showToast(error.message);
     }
