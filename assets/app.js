@@ -9,7 +9,8 @@ const state = {
   adminNamedReports: { male: [], female: [] },
   selectedTeacherId: null,
   genderFilter: "",
-  teacherViewMode: "report"
+  teacherViewMode: "report",
+  adminDrawerView: "summary"
 };
 
 function api(path, options = {}) {
@@ -189,32 +190,39 @@ function preserveViewport(callback) {
 }
 
 function renderSummaryGrid(summary) {
-  const grid = document.getElementById("summary-grid");
-  const circularWrap = document.getElementById("summary-circular");
-  if (!grid || !summary) return;
+  const renderCards = (gridId) => {
+    const grid = document.getElementById(gridId);
+    if (!grid || !summary) return;
+    const cards = [
+      { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
+      { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
+      { label: "متوسط الأداء", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
+      { label: "متوسط النهائي", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
+    ];
 
-  const cards = [
-    { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
-    { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
-    { label: "متوسط الأداء", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
-    { label: "متوسط النهائي", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
-  ];
+    grid.innerHTML = cards.map((item) => `
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft fade-in">
+        <div class="metric-label">${item.label}</div>
+        <div class="mt-3 text-3xl font-extrabold">${item.value}</div>
+        <div class="mt-4">${progressHtml("المؤشر", item.progress)}</div>
+      </div>
+    `).join("");
+  };
 
-  grid.innerHTML = cards.map((item) => `
-    <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft fade-in">
-      <div class="metric-label">${item.label}</div>
-      <div class="mt-3 text-3xl font-extrabold">${item.value}</div>
-      <div class="mt-4">${progressHtml("المؤشر", item.progress)}</div>
-    </div>
-  `).join("");
-
-  if (circularWrap) {
+  const renderCircular = (wrapId) => {
+    const circularWrap = document.getElementById(wrapId);
+    if (!circularWrap || !summary) return;
     circularWrap.innerHTML = `
       ${circularHtml("الأجزاء", summary.averageParts)}
       ${circularHtml("الاختبارات", summary.averageTests)}
       ${circularHtml("المهام", summary.averageTasks)}
     `;
-  }
+  };
+
+  renderCards("summary-grid");
+  renderCards("admin-summary-grid");
+  renderCircular("summary-circular");
+  renderCircular("admin-summary-circular");
 }
 
 function currentRoleLabel(user) {
@@ -245,30 +253,56 @@ function renderTeacherViewTabs() {
   });
 }
 
-function reportTableHtml(teachers) {
+function resultTone(value) {
+  const safe = Number(value) || 0;
+  if (safe <= 40) return "bg-rose-100 text-rose-700";
+  if (safe <= 70) return "bg-amber-100 text-amber-700";
+  return "bg-emerald-100 text-emerald-700";
+}
+
+function reportTableHtml(teachers, label) {
   if (!teachers.length) return emptyState("لا توجد بيانات.");
   return `
-    <div class="overflow-x-auto rounded-3xl border border-slate-200">
-      <table class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50 text-slate-600">
-          <tr>
-            <th class="px-4 py-3 text-right font-bold">#</th>
-            <th class="px-4 py-3 text-right font-bold">الاسم</th>
-            <th class="px-4 py-3 text-right font-bold">نسبة التحقيق</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 bg-white">
-          ${teachers.map((teacher, index) => `
+    <div class="space-y-4">
+      <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">${label}</div>
+      <div class="overflow-x-auto rounded-3xl border border-slate-200">
+        <table class="min-w-[1100px] w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-slate-600">
             <tr>
-              <td class="px-4 py-3 font-semibold text-slate-500">${index + 1}</td>
-              <td class="px-4 py-3 font-bold text-slate-900">${teacher.name}</td>
-              <td class="px-4 py-3">
-                <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${metricClass(teacher.metrics?.finalResult).replace("metric-", "badge-") === "badge-red" ? "bg-rose-100 text-rose-700" : metricClass(teacher.metrics?.finalResult).replace("metric-", "badge-") === "badge-yellow" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}">${formatPercent(teacher.metrics?.finalResult)}</span>
-              </td>
+              <th class="px-4 py-3 text-right font-bold">#</th>
+              <th class="px-4 py-3 text-right font-bold">الاسم</th>
+              <th class="px-4 py-3 text-right font-bold">المشرف</th>
+              <th class="px-4 py-3 text-right font-bold">المقرئ</th>
+              <th class="px-4 py-3 text-right font-bold">الأجزاء</th>
+              <th class="px-4 py-3 text-right font-bold">الحضور</th>
+              <th class="px-4 py-3 text-right font-bold">الاختبارات</th>
+              <th class="px-4 py-3 text-right font-bold">المهام</th>
+              <th class="px-4 py-3 text-right font-bold">النهائي</th>
+              <th class="px-4 py-3 text-right font-bold">النتيجة النهائية</th>
+              <th class="px-4 py-3 text-right font-bold">الحالة</th>
             </tr>
-          `).join("")}
-        </tbody>
-      </table>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            ${teachers.map((teacher, index) => `
+              <tr>
+                <td class="px-4 py-3 font-semibold text-slate-500">${index + 1}</td>
+                <td class="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">${teacher.name}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${teacher.supervisor_name || "—"}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${teacher.reader_name || "—"}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.partsPercent)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.attendancePercent)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.testsPercent)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.tasksPercent)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -277,8 +311,45 @@ function renderAdminNamedReports() {
   const maleEl = document.getElementById("admin-male-report-table");
   const femaleEl = document.getElementById("admin-female-report-table");
   if (!maleEl || !femaleEl) return;
-  maleEl.innerHTML = reportTableHtml((state.adminNamedReports.male || []).slice().sort((a, b) => a.name.localeCompare(b.name, "ar")));
-  femaleEl.innerHTML = reportTableHtml((state.adminNamedReports.female || []).slice().sort((a, b) => a.name.localeCompare(b.name, "ar")));
+  maleEl.innerHTML = reportTableHtml((state.adminNamedReports.male || []).slice().sort((a, b) => a.name.localeCompare(b.name, "ar")), "بيان تفصيلي للمعلمين");
+  femaleEl.innerHTML = reportTableHtml((state.adminNamedReports.female || []).slice().sort((a, b) => a.name.localeCompare(b.name, "ar")), "بيان تفصيلي للمعلمات");
+}
+
+function openAdminDrawer(view) {
+  state.adminDrawerView = view;
+  const drawer = document.getElementById("admin-drawer");
+  const backdrop = document.getElementById("admin-drawer-backdrop");
+  if (!drawer || !backdrop) return;
+  backdrop.classList.remove("hidden");
+  drawer.classList.remove("translate-x-full");
+  document.body.classList.add("overflow-hidden");
+  updateAdminDrawerView();
+}
+
+function closeAdminDrawer() {
+  const drawer = document.getElementById("admin-drawer");
+  const backdrop = document.getElementById("admin-drawer-backdrop");
+  if (!drawer || !backdrop) return;
+  drawer.classList.add("translate-x-full");
+  backdrop.classList.add("hidden");
+  document.body.classList.remove("overflow-hidden");
+}
+
+function updateAdminDrawerView() {
+  const map = {
+    summary: "المؤشرات الرئيسية",
+    male: "بيان المعلمين",
+    female: "بيان المعلمات",
+    users: "إدارة المستخدمين"
+  };
+  document.getElementById("admin-drawer-title").textContent = map[state.adminDrawerView] || "لوحة الإدارة";
+  document.querySelectorAll("[data-admin-panel]").forEach((el) => {
+    el.classList.toggle("hidden", el.dataset.adminPanel !== state.adminDrawerView);
+  });
+  document.querySelectorAll("[data-admin-drawer-btn]").forEach((btn) => {
+    const active = btn.dataset.adminDrawerBtn === state.adminDrawerView;
+    btn.className = `w-full rounded-2xl px-4 py-3 text-sm font-bold transition ${active ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}`;
+  });
 }
 
 function renderTeacherList() {
@@ -584,6 +655,7 @@ function refreshVisibleViews() {
     renderTeacherViewTabs();
     renderTeacherList();
     renderAdminNamedReports();
+    updateAdminDrawerView();
   });
 }
 
@@ -662,8 +734,8 @@ async function initIndexPage() {
   });
 }
 
-async function exportAdminPdf() {
-  const area = document.getElementById("admin-report-export-area");
+async function exportAdminPdf(targetId = "admin-male-export-area") {
+  const area = document.getElementById(targetId);
   if (!area) return;
   if (typeof html2pdf === "undefined") {
     showToast("تعذر تحميل أداة التصدير");
@@ -671,7 +743,7 @@ async function exportAdminPdf() {
   }
   await html2pdf().set({
     margin: 8,
-    filename: "admin-named-reports.pdf",
+    filename: `${targetId}.pdf`,
     image: { type: "jpeg", quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
@@ -706,9 +778,11 @@ async function initAppPage() {
         : "يمكنك إضافة المعلمين التابعين لك وتسجيل الأجزاء فقط، ولن تظهر لك الحالات المجازة.";
 
   if (state.user.role === "admin") {
-    document.getElementById("users-section")?.classList.remove("hidden-el");
+    document.getElementById("admin-sidebar-menu")?.classList.remove("hidden");
     document.getElementById("supervisor-select-wrap")?.classList.remove("hidden-el");
-    document.getElementById("admin-named-reports-section")?.classList.remove("hidden-el");
+    document.getElementById("main-summary-section")?.classList.add("hidden-el");
+    document.getElementById("summary-circular")?.classList.add("hidden-el");
+    document.getElementById("welcome-subtitle").textContent = "يمكنك فتح المؤشرات والبيانات التفصيلية وإدارة المستخدمين من القائمة الجانبية المنزلقة.";
   }
 
   if (state.user.role === "reader") {
@@ -727,6 +801,7 @@ async function initAppPage() {
   }
 
   document.getElementById("gender-filter").value = state.genderFilter;
+  if (document.getElementById("admin-gender-filter")) document.getElementById("admin-gender-filter").value = state.genderFilter;
 
   await loadReferenceUsers();
   await loadDashboardData({ showSkeleton: true });
@@ -747,6 +822,31 @@ async function initAppPage() {
     showToast("تم تحديث البيانات");
   });
 
+  document.querySelectorAll("[data-admin-drawer-btn]").forEach((button) => {
+    button.addEventListener("click", () => openAdminDrawer(button.dataset.adminDrawerBtn));
+  });
+
+  document.getElementById("admin-drawer-close")?.addEventListener("click", closeAdminDrawer);
+  document.getElementById("admin-drawer-backdrop")?.addEventListener("click", closeAdminDrawer);
+
+  document.getElementById("admin-refresh-btn")?.addEventListener("click", async () => {
+    await loadDashboardData({ showSkeleton: false });
+    if (state.user.role === "admin") await loadReferenceUsers();
+    showToast("تم تحديث البيانات");
+  });
+
+  document.getElementById("admin-gender-filter")?.addEventListener("change", async (event) => {
+    state.genderFilter = event.target.value;
+    const mainGenderFilter = document.getElementById("gender-filter");
+    if (mainGenderFilter) mainGenderFilter.value = state.genderFilter;
+    populatePeopleSelectors();
+    await loadDashboardData({ showSkeleton: false });
+  });
+
+  document.querySelectorAll("[data-export-target]").forEach((button) => {
+    button.addEventListener("click", () => exportAdminPdf(button.dataset.exportTarget));
+  });
+
   document.getElementById("refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
     if (state.user.role === "admin") await loadReferenceUsers();
@@ -755,6 +855,8 @@ async function initAppPage() {
 
   document.getElementById("gender-filter")?.addEventListener("change", async (event) => {
     state.genderFilter = event.target.value;
+    const adminGenderFilter = document.getElementById("admin-gender-filter");
+    if (adminGenderFilter) adminGenderFilter.value = state.genderFilter;
     populatePeopleSelectors();
     await loadDashboardData({ showSkeleton: false });
   });
@@ -769,7 +871,6 @@ async function initAppPage() {
     });
   });
 
-  document.getElementById("export-admin-pdf-btn")?.addEventListener("click", exportAdminPdf);
 
   document.getElementById("teacher-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();

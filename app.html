@@ -31,12 +31,28 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900">
   <header class="sticky top-0 z-40 border-b border-white/60 bg-white/80 backdrop-blur">
-    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-      <div>
-        <div class="text-sm text-slate-500">منصة رخصة ممارس</div>
-        <h1 class="text-xl font-extrabold">لوحة التحكم</h1>
+    <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-3 rounded-[1.5rem] border border-slate-200 bg-white px-3 py-2 shadow-soft">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-base font-extrabold text-white">ر</div>
+          <div>
+            <div class="text-[11px] font-bold text-slate-400">شعار المنصة</div>
+            <div class="text-sm font-extrabold text-slate-900">رخصة ممارس</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 rounded-[1.5rem] border border-slate-200 bg-white px-3 py-2 shadow-soft">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-base font-extrabold text-white">ج</div>
+          <div>
+            <div class="text-[11px] font-bold text-slate-400">شعار الجهة</div>
+            <div class="text-sm font-extrabold text-slate-900">الجهة التابعة</div>
+          </div>
+        </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center justify-between gap-4 lg:min-w-[18rem] lg:justify-end">
+        <div>
+          <div class="text-sm text-slate-500">منصة رخصة ممارس</div>
+          <h1 class="text-xl font-extrabold">لوحة التحكم</h1>
+        </div>
         <button type="button" id="logout-btn" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">تسجيل الخروج</button>
       </div>
     </div>
@@ -58,7 +74,7 @@
 
     <section class="mt-6 grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
       <div class="space-y-6">
-        <section class="glass-card rounded-[2rem] p-5 md:p-6">
+        <section id="main-summary-section" class="glass-card rounded-[2rem] p-5 md:p-6">
           <div class="section-title">
             <h2>المؤشرات الرئيسية</h2>
             <div class="flex items-center gap-2">
@@ -70,34 +86,7 @@
               <button type="button" id="refresh-btn" class="rounded-2xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">تحديث</button>
             </div>
           </div>
-
           <div id="summary-grid" class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"></div>
-        </section>
-
-        <section id="admin-named-reports-section" class="glass-card rounded-[2rem] p-5 md:p-6 hidden-el">
-          <div class="section-title">
-            <div>
-              <h2>بيان الأسماء ونسب التحقيق</h2>
-              <p class="mt-1 text-xs text-slate-500">جدول مستقل للمعلمين والمعلمات مع نسبة التحقيق النهائية.</p>
-            </div>
-            <button type="button" id="export-admin-pdf-btn" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير PDF</button>
-          </div>
-
-          <div id="admin-report-export-area" class="mt-5 space-y-4">
-            <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              بيان الإدارة — الأسماء ونسب التحقيق
-            </div>
-            <div class="grid gap-4 xl:grid-cols-2">
-              <section class="rounded-[1.7rem] border border-slate-200 bg-white p-4 shadow-soft">
-                <div class="mb-3 text-base font-extrabold text-slate-900">بيان المعلمين</div>
-                <div id="admin-male-report-table"></div>
-              </section>
-              <section class="rounded-[1.7rem] border border-slate-200 bg-white p-4 shadow-soft">
-                <div class="mb-3 text-base font-extrabold text-slate-900">بيان المعلمات</div>
-                <div id="admin-female-report-table"></div>
-              </section>
-            </div>
-          </div>
         </section>
 
         <section id="teacher-view-section" class="glass-card rounded-[2rem] p-5 md:p-6 hidden-el">
@@ -113,31 +102,6 @@
             <button type="button" data-view-mode="tasks" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">المهام الأدائية</button>
             <button type="button" data-view-mode="final" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">الاختبار النهائي</button>
           </div>
-        </section>
-
-        <section id="users-section" class="glass-card rounded-[2rem] p-5 md:p-6 hidden-el">
-          <div class="section-title">
-            <h2>إدارة المستخدمين</h2>
-            <span class="text-xs text-slate-500">هذه الواجهة مخصصة للمدير</span>
-          </div>
-
-          <form id="user-form" class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <input name="name" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="الاسم" required />
-            <input name="username" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="اسم المستخدم" required />
-            <input type="password" name="password" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="كلمة المرور" required />
-            <select name="role" id="user-role" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <option value="supervisor">مشرف / مشرفة</option>
-              <option value="reader">مقرئ / مقرئة</option>
-              <option value="admin">مدير</option>
-            </select>
-            <select name="gender" id="user-gender" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <option value="male">رجال</option>
-              <option value="female">نساء</option>
-            </select>
-            <button class="xl:col-span-5 rounded-2xl bg-brand-600 px-4 py-3 font-bold text-white hover:bg-brand-700">إضافة مستخدم</button>
-          </form>
-
-          <div id="users-list" class="mt-6 grid gap-4"></div>
         </section>
 
         <section class="glass-card rounded-[2rem] p-5 md:p-6">
@@ -159,6 +123,14 @@
           <div class="mt-5 space-y-3">
             <button type="button" id="sidebar-add-teacher-btn" class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-700">إضافة معلم / معلمة</button>
             <button type="button" id="sidebar-refresh-btn" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">تحديث الصفحة</button>
+          </div>
+
+          <div id="admin-sidebar-menu" class="mt-5 hidden space-y-3 rounded-[1.7rem] border border-slate-200 bg-slate-50 p-4">
+            <div class="mb-1 text-sm font-extrabold text-slate-900">قوائم الإدارة المنزلقة</div>
+            <button type="button" data-admin-drawer-btn="summary" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">المؤشرات الرئيسية</button>
+            <button type="button" data-admin-drawer-btn="male" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">بيان المعلمين</button>
+            <button type="button" data-admin-drawer-btn="female" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">بيان المعلمات</button>
+            <button type="button" data-admin-drawer-btn="users" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100">إدارة المستخدمين</button>
           </div>
 
           <section id="teacher-management-section" class="mt-5 hidden-el rounded-[1.7rem] border border-slate-200 bg-slate-50 p-4">
@@ -203,6 +175,86 @@
       </aside>
     </section>
   </main>
+
+  <div id="admin-drawer-backdrop" class="fixed inset-0 z-40 hidden bg-slate-900/30"></div>
+  <aside id="admin-drawer" class="fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-2xl translate-x-full flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300">
+    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <div>
+        <div class="text-xs font-bold text-slate-400">قائمة منزلقة</div>
+        <h2 id="admin-drawer-title" class="mt-1 text-lg font-extrabold text-slate-900">لوحة الإدارة</h2>
+      </div>
+      <button type="button" id="admin-drawer-close" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">إغلاق</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-5">
+      <section data-admin-panel="summary" class="hidden space-y-5">
+        <div class="section-title">
+          <h2>المؤشرات الرئيسية</h2>
+          <div class="flex items-center gap-2">
+            <select id="admin-gender-filter" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm">
+              <option value="">كل الفئات</option>
+              <option value="male">المعلمين</option>
+              <option value="female">المعلمات</option>
+            </select>
+            <button type="button" id="admin-refresh-btn" class="rounded-2xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">تحديث</button>
+          </div>
+        </div>
+        <div id="admin-summary-grid" class="grid gap-4 sm:grid-cols-2"></div>
+        <div id="admin-summary-circular" class="grid gap-4 sm:grid-cols-3"></div>
+      </section>
+
+      <section data-admin-panel="male" class="hidden">
+        <div id="admin-male-export-area" class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-bold text-slate-400">بيان تفصيلي</div>
+              <div class="text-lg font-extrabold text-slate-900">المعلمون</div>
+            </div>
+            <button type="button" data-export-target="admin-male-export-area" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير PDF</button>
+          </div>
+          <div id="admin-male-report-table"></div>
+        </div>
+      </section>
+
+      <section data-admin-panel="female" class="hidden">
+        <div id="admin-female-export-area" class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-bold text-slate-400">بيان تفصيلي</div>
+              <div class="text-lg font-extrabold text-slate-900">المعلمات</div>
+            </div>
+            <button type="button" data-export-target="admin-female-export-area" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">تصدير PDF</button>
+          </div>
+          <div id="admin-female-report-table"></div>
+        </div>
+      </section>
+
+      <section data-admin-panel="users" class="hidden space-y-5">
+        <div class="section-title">
+          <h2>إدارة المستخدمين</h2>
+          <span class="text-xs text-slate-500">واجهة المدير فقط</span>
+        </div>
+
+        <form id="user-form" class="grid gap-4 md:grid-cols-2">
+          <input name="name" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="الاسم" required />
+          <input name="username" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="اسم المستخدم" required />
+          <input type="password" name="password" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="كلمة المرور" required />
+          <select name="role" id="user-role" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <option value="supervisor">مشرف / مشرفة</option>
+            <option value="reader">مقرئ / مقرئة</option>
+            <option value="admin">مدير</option>
+          </select>
+          <select name="gender" id="user-gender" class="soft-ring rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <option value="male">رجال</option>
+            <option value="female">نساء</option>
+          </select>
+          <button class="md:col-span-2 rounded-2xl bg-brand-600 px-4 py-3 font-bold text-white hover:bg-brand-700">إضافة مستخدم</button>
+        </form>
+
+        <div id="users-list" class="grid gap-4"></div>
+      </section>
+    </div>
+  </aside>
 
   <div id="toast-container"></div>
   <script src="/assets/app.js"></script>
