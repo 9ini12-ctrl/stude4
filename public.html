@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>التقارير العامة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        boxShadow: {
+          soft: "0 18px 50px rgba(15,23,42,.08)"
+        },
+        colors: {
+          brand: {
+            50: "#f0f9ff",
+            100: "#e0f2fe",
+            500: "#0ea5e9",
+            600: "#0284c7",
+            700: "#0369a1"
+          }
+        }
+      }
+    }
+  };
+</script>
+
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <header class="border-b border-white/60 bg-white/80 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
+      <div>
+        <div class="text-sm text-slate-500">عرض عام بدون تسجيل دخول</div>
+        <h1 class="text-xl font-extrabold">تقارير منصة رخصة ممارس</h1>
+      </div>
+      <div class="flex gap-2">
+        <a href="/" class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">تسجيل الدخول</a>
+        <a href="/app.html" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">لوحة التحكم</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6">
+    <section class="glass-card rounded-[2rem] p-5 md:p-6">
+      <div class="section-title">
+        <h2>الملخص العام</h2>
+        <button id="public-refresh-btn" class="rounded-2xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">تحديث</button>
+      </div>
+      <div id="public-summary-grid" class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"></div>
+    </section>
+
+    <section class="mt-6 grid gap-6 lg:grid-cols-3">
+      <section class="glass-card rounded-[2rem] p-5 md:p-6">
+        <div class="section-title"><h2>المعلمين</h2></div>
+        <div id="public-male" class="mt-5"></div>
+      </section>
+      <section class="glass-card rounded-[2rem] p-5 md:p-6">
+        <div class="section-title"><h2>المعلمات</h2></div>
+        <div id="public-female" class="mt-5"></div>
+      </section>
+      <section class="glass-card rounded-[2rem] p-5 md:p-6">
+        <div class="section-title"><h2>مقارنة سريعة</h2></div>
+        <div id="public-comparison" class="mt-5"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

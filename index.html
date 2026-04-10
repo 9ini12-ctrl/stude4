@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>منصة رخصة ممارس</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        boxShadow: {
+          soft: "0 18px 50px rgba(15,23,42,.08)"
+        },
+        colors: {
+          brand: {
+            50: "#f0f9ff",
+            100: "#e0f2fe",
+            500: "#0ea5e9",
+            600: "#0284c7",
+            700: "#0369a1"
+          }
+        }
+      }
+    }
+  };
+</script>
+
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="absolute inset-0 -z-10 overflow-hidden">
+    <div class="absolute top-0 right-0 h-80 w-80 rounded-full bg-sky-100 blur-3xl opacity-70"></div>
+    <div class="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-cyan-100 blur-3xl opacity-60"></div>
+  </div>
+
+  <main class="mx-auto flex min-h-screen max-w-6xl items-center px-4 py-8">
+    <div class="grid w-full gap-6 lg:grid-cols-[1.05fr_.95fr]">
+      <section class="glass-card rounded-[2rem] p-6 md:p-8 fade-in">
+        <div class="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <span class="badge badge-neutral">واجهة الدخول والإعداد الأولي</span>
+            <h1 class="mt-4 text-3xl font-extrabold leading-tight text-slate-900">منصة رخصة ممارس</h1>
+            <p class="mt-3 max-w-xl text-sm leading-7 text-slate-600">
+              إدارة وتقييم المعلمين والمعلمات خلال دورة مدتها 12 يومًا، مع فصل كامل بين الرجال والنساء وعرض النتائج كنسب مئوية وتقارير تفاعلية.
+            </p>
+          </div>
+          <a href="/public.html" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">التقارير العامة</a>
+        </div>
+
+        <div id="login-state" class="space-y-5">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-3xl bg-white p-5 shadow-soft border border-slate-200">
+              <div class="metric-label">الفصل الكامل</div>
+              <div class="mt-2 text-lg font-bold">رجال / نساء</div>
+              <p class="mt-2 text-sm text-slate-500">كل مشرف ومقرئ يرى الفئة التابعة له فقط، مع حماية كاملة عبر الواجهة والدوال.</p>
+            </div>
+            <div class="rounded-3xl bg-white p-5 shadow-soft border border-slate-200">
+              <div class="metric-label">الإنجاز المرئي</div>
+              <div class="mt-2 text-lg font-bold">نسب + Progress</div>
+              <p class="mt-2 text-sm text-slate-500">بطاقات، أشرطة تقدم، ومؤشرات دائرية لعرض الأداء الفردي والعام بشكل واضح.</p>
+            </div>
+          </div>
+
+          <div id="status-box" class="rounded-3xl border border-slate-200 bg-white p-5">
+            <div class="space-y-3">
+              <div class="skeleton h-6 w-40"></div>
+              <div class="skeleton h-4 w-72"></div>
+              <div class="skeleton h-12 w-full"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card rounded-[2rem] p-6 md:p-8 fade-in">
+        <div class="mb-6">
+          <span class="badge badge-neutral">تهيئة سريعة</span>
+          <h2 id="auth-title" class="mt-4 text-2xl font-extrabold">جارٍ فحص النظام...</h2>
+          <p id="auth-subtitle" class="mt-2 text-sm leading-7 text-slate-500">
+            يتم التحقق الآن من وجود مستخدمين في النظام لتحديد ما إذا كنت تحتاج إنشاء المدير الأول أو تسجيل الدخول مباشرة.
+          </p>
+        </div>
+
+        <form id="bootstrap-form" class="hidden-el space-y-4">
+          <div class="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+            لا يوجد أي مستخدم بعد. أنشئ أول مدير للنظام من هنا.
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold">اسم المدير</label>
+            <input name="name" class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="مثال: مدير النظام" required />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold">اسم المستخدم</label>
+            <input name="username" class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="admin" required />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold">كلمة المرور</label>
+            <input type="password" name="password" class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="********" required />
+          </div>
+
+          <button class="w-full rounded-2xl bg-brand-600 px-4 py-3 font-bold text-white transition hover:bg-brand-700">إنشاء المدير الأول</button>
+        </form>
+
+        <form id="login-form" class="hidden-el space-y-4">
+          <div>
+            <label class="mb-2 block text-sm font-semibold">اسم المستخدم</label>
+            <input name="username" class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="اسم المستخدم" required />
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-semibold">كلمة المرور</label>
+            <input type="password" name="password" class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-4 py-3" placeholder="********" required />
+          </div>
+
+          <button class="w-full rounded-2xl bg-slate-900 px-4 py-3 font-bold text-white transition hover:bg-slate-700">تسجيل الدخول</button>
+        </form>
+
+        <div id="form-message" class="mt-4 text-sm font-medium text-slate-500"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

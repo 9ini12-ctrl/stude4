@@ -1,0 +1,183 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.06);
+}
+
+.soft-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.16);
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 1rem;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.35s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.progress-track {
+  height: 0.7rem;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 240ms ease;
+}
+
+.metric-red {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+.metric-yellow {
+  background: linear-gradient(90deg, #f59e0b, #eab308);
+}
+
+.metric-green {
+  background: linear-gradient(90deg, #10b981, #22c55e);
+}
+
+.circular {
+  width: 78px;
+  height: 78px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.circular::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  background: white;
+  border-radius: 9999px;
+}
+
+.circular > span {
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.part-btn,
+.grid-toggle {
+  transition: 0.18s ease;
+}
+
+.part-btn:hover,
+.grid-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.part-btn.active,
+.grid-toggle.active {
+  background: #0ea5e9;
+  color: white;
+  border-color: #0ea5e9;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge-neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-title h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.table-scroll {
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translateX(-50%);
+  z-index: 60;
+  background: #0f172a;
+  color: white;
+  padding: 0.9rem 1rem;
+  border-radius: 9999px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  font-size: 0.88rem;
+}
+
+.hidden-el {
+  display: none !important;
+}
