@@ -315,12 +315,45 @@ function renderAdminNamedReports() {
   femaleEl.innerHTML = reportTableHtml((state.adminNamedReports.female || []).slice().sort((a, b) => a.name.localeCompare(b.name, "ar")), "بيان تفصيلي للمعلمات");
 }
 
+function openSidebar() {
+  const sidebar = document.getElementById("app-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  const toggleBtn = document.getElementById("sidebar-toggle-btn");
+  if (!sidebar || !backdrop) return;
+  sidebar.classList.remove("translate-x-full", "pointer-events-none");
+  backdrop.classList.remove("pointer-events-none", "opacity-0");
+  sidebar.setAttribute("aria-hidden", "false");
+  toggleBtn?.setAttribute("aria-expanded", "true");
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById("app-sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  const toggleBtn = document.getElementById("sidebar-toggle-btn");
+  if (!sidebar || !backdrop) return;
+  sidebar.classList.add("translate-x-full", "pointer-events-none");
+  backdrop.classList.add("pointer-events-none", "opacity-0");
+  sidebar.setAttribute("aria-hidden", "true");
+  toggleBtn?.setAttribute("aria-expanded", "false");
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById("app-sidebar");
+  if (!sidebar) return;
+  if (sidebar.classList.contains("translate-x-full")) {
+    openSidebar();
+  } else {
+    closeSidebar();
+  }
+}
+
 function openAdminDrawer(view) {
   state.adminDrawerView = view;
   const drawer = document.getElementById("admin-drawer");
   if (!drawer) return;
   drawer.classList.remove("hidden");
   updateAdminDrawerView();
+  openSidebar();
 }
 
 function closeAdminDrawer() {
@@ -780,7 +813,9 @@ async function initAppPage() {
     document.getElementById("main-summary-section")?.classList.add("hidden-el");
     document.getElementById("summary-circular")?.classList.add("hidden-el");
     document.getElementById("welcome-subtitle").textContent = "يمكنك التنقل بين المؤشرات والبيانات التفصيلية وإدارة المستخدمين من الشريط الجانبي.";
-    openAdminDrawer("summary");
+    state.adminDrawerView = "summary";
+    document.getElementById("admin-drawer")?.classList.remove("hidden");
+    updateAdminDrawerView();
   }
 
   if (state.user.role === "reader") {
@@ -810,6 +845,13 @@ async function initAppPage() {
     window.location.href = "/";
   });
 
+  document.getElementById("sidebar-toggle-btn")?.addEventListener("click", toggleSidebar);
+  document.getElementById("sidebar-close-btn")?.addEventListener("click", closeSidebar);
+  document.getElementById("sidebar-backdrop")?.addEventListener("click", closeSidebar);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSidebar();
+  });
+
   document.getElementById("sidebar-add-teacher-btn")?.addEventListener("click", () => {
     document.getElementById("teacher-management-section")?.classList.toggle("hidden-el");
   });
@@ -824,7 +866,7 @@ async function initAppPage() {
     button.addEventListener("click", () => openAdminDrawer(button.dataset.adminDrawerBtn));
   });
 
-  document.getElementById("admin-drawer-close")?.addEventListener("click", closeAdminDrawer);
+  document.getElementById("admin-drawer-close")?.addEventListener("click", closeSidebar);
 
   document.getElementById("admin-refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
