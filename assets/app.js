@@ -318,21 +318,17 @@ function renderAdminNamedReports() {
 function openAdminDrawer(view) {
   state.adminDrawerView = view;
   const drawer = document.getElementById("admin-drawer");
-  const backdrop = document.getElementById("admin-drawer-backdrop");
-  if (!drawer || !backdrop) return;
-  backdrop.classList.remove("hidden");
-  drawer.classList.remove("translate-x-full");
-  document.body.classList.add("overflow-hidden");
+  if (!drawer) return;
+  drawer.classList.remove("hidden");
   updateAdminDrawerView();
 }
 
 function closeAdminDrawer() {
   const drawer = document.getElementById("admin-drawer");
-  const backdrop = document.getElementById("admin-drawer-backdrop");
-  if (!drawer || !backdrop) return;
-  drawer.classList.add("translate-x-full");
-  backdrop.classList.add("hidden");
-  document.body.classList.remove("overflow-hidden");
+  if (!drawer) return;
+  drawer.classList.add("hidden");
+  state.adminDrawerView = "";
+  updateAdminDrawerView();
 }
 
 function updateAdminDrawerView() {
@@ -342,9 +338,10 @@ function updateAdminDrawerView() {
     female: "بيان المعلمات",
     users: "إدارة المستخدمين"
   };
-  document.getElementById("admin-drawer-title").textContent = map[state.adminDrawerView] || "لوحة الإدارة";
+  const titleEl = document.getElementById("admin-drawer-title");
+  if (titleEl) titleEl.textContent = map[state.adminDrawerView] || "لوحة الإدارة";
   document.querySelectorAll("[data-admin-panel]").forEach((el) => {
-    el.classList.toggle("hidden", el.dataset.adminPanel !== state.adminDrawerView);
+    el.classList.toggle("hidden", !state.adminDrawerView || el.dataset.adminPanel !== state.adminDrawerView);
   });
   document.querySelectorAll("[data-admin-drawer-btn]").forEach((btn) => {
     const active = btn.dataset.adminDrawerBtn === state.adminDrawerView;
@@ -782,7 +779,8 @@ async function initAppPage() {
     document.getElementById("supervisor-select-wrap")?.classList.remove("hidden-el");
     document.getElementById("main-summary-section")?.classList.add("hidden-el");
     document.getElementById("summary-circular")?.classList.add("hidden-el");
-    document.getElementById("welcome-subtitle").textContent = "يمكنك فتح المؤشرات والبيانات التفصيلية وإدارة المستخدمين من القائمة الجانبية المنزلقة.";
+    document.getElementById("welcome-subtitle").textContent = "يمكنك التنقل بين المؤشرات والبيانات التفصيلية وإدارة المستخدمين من الشريط الجانبي.";
+    openAdminDrawer("summary");
   }
 
   if (state.user.role === "reader") {
@@ -827,7 +825,6 @@ async function initAppPage() {
   });
 
   document.getElementById("admin-drawer-close")?.addEventListener("click", closeAdminDrawer);
-  document.getElementById("admin-drawer-backdrop")?.addEventListener("click", closeAdminDrawer);
 
   document.getElementById("admin-refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
