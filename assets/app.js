@@ -245,6 +245,7 @@ function currentRoleLabel(user) {
 function renderTeacherList() {
   const container = document.getElementById("teachers-list");
   const title = document.getElementById("teacher-list-title");
+  const note = document.getElementById("teacher-list-note");
   if (!container) return;
 
   if (!state.teachers.length) {
@@ -252,7 +253,13 @@ function renderTeacherList() {
     return;
   }
 
-  title.textContent = state.user?.role === "reader" ? "الأجزاء المسندة إليك" : "المعلمون / المعلمات";
+  if (state.user?.role === "reader") {
+    title.textContent = "المعلمون التابعون لك";
+    if (note) note.textContent = "يظهر الاسم والأجزاء فقط.";
+  } else {
+    title.textContent = "المعلمون / المعلمات";
+    if (note) note.textContent = "نسب، تقدم، وتحديثات حسب الدور";
+  }
 
   container.innerHTML = state.teachers.map((teacher) => {
     const canManage = state.user.role === "admin" || state.user.role === "supervisor";
@@ -266,6 +273,17 @@ function renderTeacherList() {
         </button>
       `;
     }).join("");
+
+    if (isReader) {
+      return `
+        <article class="rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-soft fade-in">
+          <div class="mb-4 text-lg font-extrabold text-slate-900">${teacher.name}</div>
+          <div class="rounded-3xl border border-slate-200 p-4">
+            <div class="grid grid-cols-5 gap-2 sm:grid-cols-6">${recitationButtons}</div>
+          </div>
+        </article>
+      `;
+    }
 
     const attendanceButtons = Array.from({ length: 12 }).map((_, index) => {
       const day = index + 1;
@@ -453,10 +471,23 @@ async function loadReferenceUsers() {
 async function loadDashboardData() {
   const summaryGrid = document.getElementById("summary-grid");
   const teachersList = document.getElementById("teachers-list");
-  if (summaryGrid) summaryGrid.innerHTML = summaryCardsSkeleton(4);
+  const isReader = state.user?.role === "reader";
+
+  if (!isReader && summaryGrid) summaryGrid.innerHTML = summaryCardsSkeleton(4);
   if (teachersList) teachersList.innerHTML = teacherSkeleton(3);
 
   const query = state.genderFilter ? `?gender=${encodeURIComponent(state.genderFilter)}` : "";
+
+  if (isReader) {
+    const teachersResponse = await api(`teachers-list${query}`);
+    state.summary = null;
+    state.teachers = teachersResponse.teachers || [];
+    state.selectedTeacherId = state.teachers[0]?.id || null;
+    renderTeacherList();
+    renderDetailPanel();
+    return;
+  }
+
   const [summaryResponse, teachersResponse] = await Promise.all([
     api(`reports-summary${query}`),
     api(`teachers-list${query}`)
@@ -500,14 +531,29 @@ async function initAppPage() {
       ? "يمكنك إدارة المستخدمين ومراجعة التقارير الكاملة وحذف البيانات عند الحاجة."
       : state.user.role === "supervisor"
         ? "يمكنك إدارة التابعين لك وتسجيل الحضور والاختبارات والمهام والنهائي."
-        : "يمكنك تسجيل الأجزاء فقط للأسماء المربوطة بك، ولن تظهر لك الحالات المجازة.";
+        : "يمكنك إضافة المعلمين التابعين لك وتسجيل الأجزاء فقط، ولن تظهر لك الحالات المجازة.";
 
-  if (state.user.role === "admin" || state.user.role === "supervisor") {
+  if (["admin", "supervisor", "reader"].includes(state.user.role)) {
     document.getElementById("teacher-management-section")?.classList.remove("hidden-el");
   }
   if (state.user.role === "admin") {
     document.getElementById("users-section")?.classList.remove("hidden-el");
     document.getElementById("supervisor-select-wrap")?.classList.remove("hidden-el");
+  }
+
+  if (state.user.role === "reader") {
+    document.getElementById("reader-select-wrap")?.classList.add("hidden-el");
+    document.getElementById("summary-grid")?.closest("section")?.classList.add("hidden-el");
+    document.getElementById("summary-circular")?.classList.add("hidden-el");
+    document.getElementById("gender-filter")?.closest("div")?.classList.add("hidden-el");
+    document.getElementById("detail-panel")?.closest("section")?.classList.add("hidden-el");
+    document.getElementById("teacher-form-title").textContent = state.user.gender === "female" ? "إضافة معلمة تابعة لك" : "إضافة معلم تابع لك";
+    document.getElementById("teacher-form-note").textContent = "سيتم ربط الاسم بك مباشرة كمقرئ/مقرئة.";
+    document.getElementById("teacher-name-label").textContent = state.user.gender === "female" ? "اسم المعلمة" : "اسم المعلم";
+    document.getElementById("teacher-submit-btn").textContent = state.user.gender === "female" ? "إضافة معلمة" : "إضافة معلم";
+    document.getElementById("teacher-list-title").textContent = state.user.gender === "female" ? "المعلمات التابعات لك" : "المعلمون التابعون لك";
+    const notesSection = document.querySelectorAll("aside .glass-card")[1];
+    notesSection?.classList.add("hidden-el");
   }
 
   document.getElementById("gender-filter").value = state.genderFilter;
@@ -545,7 +591,9 @@ async function initAppPage() {
       event.currentTarget.reset();
       populatePeopleSelectors();
       await loadDashboardData();
-      showToast("تمت إضافة المعلم / المعلمة");
+      showToast(state.user?.role === "reader"
+        ? (state.user.gender === "female" ? "تمت إضافة المعلمة وربطها بك" : "تمت إضافة المعلم وربطه بك")
+        : "تمت إضافة المعلم / المعلمة");
     } catch (error) {
       showToast(error.message);
     }

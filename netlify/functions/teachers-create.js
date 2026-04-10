@@ -8,7 +8,7 @@ exports.handler = async (event) => {
 
   try {
     const authUser = requireAuth(event);
-    requireRoles(authUser, ["admin", "supervisor"]);
+    requireRoles(authUser, ["admin", "supervisor", "reader"]);
     const body = parseBody(event);
 
     const name = String(body.name || "").trim();
@@ -21,6 +21,7 @@ exports.handler = async (event) => {
 
     let supervisorId = authUser.id;
     let supervisorGender = authUser.gender;
+    let finalReaderId = requestedReaderId;
 
     if (authUser.role === "admin") {
       if (!requestedSupervisorId) {
@@ -40,17 +41,43 @@ exports.handler = async (event) => {
       supervisorGender = supervisor.gender;
     }
 
+    if (authUser.role === "supervisor") {
+      finalReaderId = requestedReaderId;
+    }
+
+    if (authUser.role === "reader") {
+      if (!authUser.gender) {
+        throw Object.assign(new Error("تعذر تحديد فئة المقرئ / المقرئة"), { statusCode: 400 });
+      }
+      supervisorGender = authUser.gender;
+      finalReaderId = authUser.id;
+
+      const supervisorRes = await query(`
+        SELECT id
+        FROM users
+        WHERE role = 'supervisor' AND gender = $1
+        ORDER BY created_at ASC
+        LIMIT 1
+      `, [authUser.gender]);
+
+      const supervisor = supervisorRes.rows[0];
+      if (!supervisor) {
+        throw Object.assign(new Error("لا يوجد مشرف / مشرفة من نفس الفئة لربط الاسم الجديد"), { statusCode: 400 });
+      }
+      supervisorId = supervisor.id;
+    }
+
     if (!["male", "female"].includes(supervisorGender)) {
       throw Object.assign(new Error("تعذر تحديد جنس الفئة من المشرف"), { statusCode: 400 });
     }
 
-    if (requestedReaderId) {
+    if (finalReaderId) {
       const readerRes = await query(`
         SELECT id, role, gender
         FROM users
         WHERE id = $1
         LIMIT 1
-      `, [requestedReaderId]);
+      `, [finalReaderId]);
       const reader = readerRes.rows[0];
       if (!reader || reader.role !== "reader" || reader.gender !== supervisorGender) {
         throw Object.assign(new Error("المقرئ / المقرئة يجب أن يكون من نفس الفئة"), { statusCode: 400 });
@@ -62,7 +89,7 @@ exports.handler = async (event) => {
         INSERT INTO teachers (name, supervisor_id, reader_id, gender)
         VALUES ($1, $2, $3, $4)
         RETURNING id, name
-      `, [name, supervisorId, requestedReaderId, supervisorGender]);
+      `, [name, supervisorId, finalReaderId, supervisorGender]);
 
       const teacherId = insertTeacher.rows[0].id;
       await client.query(`
