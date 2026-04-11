@@ -13,8 +13,8 @@ const state = {
   teacherSearch: "",
   teacherSort: "name_asc",
   adminReportFilters: {
-    male: { search: "", sort: "name_asc" },
-    female: { search: "", sort: "name_asc" }
+    male: { search: "", sort: "name_asc", page: 1, pageSize: 10 },
+    female: { search: "", sort: "name_asc", page: 1, pageSize: 10 }
   }
 };
 
@@ -133,12 +133,21 @@ function normalizeText(value) {
 
 function sortTeachers(list, sortMode = "name_asc") {
   const items = [...(list || [])];
-  return items.sort((a, b) => {
-    if (sortMode === "name_desc") return (b.name || "").localeCompare(a.name || "", "ar");
-    if (sortMode === "result_desc") return (Number(b.metrics?.finalResult) || 0) - (Number(a.metrics?.finalResult) || 0);
-    if (sortMode === "result_asc") return (Number(a.metrics?.finalResult) || 0) - (Number(b.metrics?.finalResult) || 0);
-    return (a.name || "").localeCompare(b.name || "", "ar");
+  const metricSort = (key, dir = "desc") => items.sort((a, b) => {
+    const av = Number(a.metrics?.[key]) || 0;
+    const bv = Number(b.metrics?.[key]) || 0;
+    return dir === "asc" ? av - bv : bv - av;
   });
+
+  if (sortMode === "name_desc") return items.sort((a, b) => (b.name || "").localeCompare(a.name || "", "ar"));
+  if (sortMode === "result_desc") return metricSort("finalResult", "desc");
+  if (sortMode === "result_asc") return metricSort("finalResult", "asc");
+  if (sortMode === "parts_desc") return metricSort("partsPercent", "desc");
+  if (sortMode === "attendance_desc") return metricSort("attendancePercent", "desc");
+  if (sortMode === "tests_desc") return metricSort("testsPercent", "desc");
+  if (sortMode === "tasks_desc") return metricSort("tasksPercent", "desc");
+  if (sortMode === "final_exam_desc") return metricSort("finalExamPercent", "desc");
+  return items.sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
 }
 
 function filterAndSortTeachers(list, searchText = "", sortMode = "name_asc") {
@@ -324,33 +333,77 @@ function resultTone(value) {
   return "bg-emerald-100 text-emerald-700";
 }
 
-function reportTableHtml(teachers, label) {
-  if (!teachers.length) return emptyState("لا توجد بيانات.");
+function getAdminReportPrepared(targetKey = "male") {
+  const filters = state.adminReportFilters[targetKey] || { search: "", sort: "name_asc", page: 1, pageSize: 10 };
+  const filtered = filterAndSortTeachers(
+    state.adminNamedReports[targetKey] || [],
+    filters.search,
+    filters.sort
+  );
+
+  const pageSize = Math.max(5, Number(filters.pageSize) || 10);
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(Math.max(1, Number(filters.page) || 1), totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(startIndex, startIndex + pageSize);
+
+  state.adminReportFilters[targetKey].page = currentPage;
+  state.adminReportFilters[targetKey].pageSize = pageSize;
+
+  return { filters, filtered, total, totalPages, currentPage, pageSize, startIndex, pageRows };
+}
+
+function reportTableHtml(targetKey, label) {
+  const { filtered, total, totalPages, currentPage, pageSize, startIndex, pageRows } = getAdminReportPrepared(targetKey);
+  if (!filtered.length) return emptyState("لا توجد بيانات.");
+
+  const sortableHeader = (text, sortValue, activeSort, align = "right") => {
+    const isActive = activeSort === sortValue;
+    return `<button type="button" data-admin-sort-target="${targetKey}" data-sort-value="${sortValue}" class="inline-flex items-center gap-1 whitespace-nowrap font-bold ${isActive ? "text-slate-900" : "text-slate-600 hover:text-slate-900"}">${text}<span class="text-[10px]">${isActive ? "●" : "↕"}</span></button>`;
+  };
+
+  const pageOptions = [10, 25, 50, 100].map((size) => `<option value="${size}" ${pageSize === size ? "selected" : ""}>${size}</option>`).join("");
+  const startLabel = total ? startIndex + 1 : 0;
+  const endLabel = Math.min(startIndex + pageRows.length, total);
+
   return `
     <div class="space-y-4">
-      <div class="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">${label}</div>
+      <div class="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
+        <div class="font-semibold">${label}</div>
+        <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <span class="rounded-full bg-white px-3 py-1.5 font-bold text-slate-700">إجمالي السجلات: ${total}</span>
+          <label class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 font-bold text-slate-700">
+            <span>عرض</span>
+            <select data-admin-pagesize-target="${targetKey}" class="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none">
+              ${pageOptions}
+            </select>
+          </label>
+          <span class="rounded-full bg-white px-3 py-1.5 font-bold text-slate-700">${startLabel} - ${endLabel}</span>
+        </div>
+      </div>
 
       <div class="overflow-x-auto rounded-3xl border border-slate-200 bg-white">
-        <table class="min-w-[1120px] divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50 text-slate-600">
+        <table class="min-w-[1200px] divide-y divide-slate-200 text-sm">
+          <thead class="sticky top-0 z-10 bg-slate-50 text-slate-600">
             <tr>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">#</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الاسم</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">#</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الاسم", "name_asc", state.adminReportFilters[targetKey].sort)}</th>
               <th class="px-3 py-3 text-right font-bold whitespace-nowrap">المشرف</th>
               <th class="px-3 py-3 text-right font-bold whitespace-nowrap">المقرئ</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الأجزاء</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الحضور</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الاختبارات</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">المهام</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">النهائي</th>
-              <th class="px-3 py-3 text-right font-bold whitespace-nowrap">النتيجة</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الأجزاء", "parts_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الحضور", "attendance_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الاختبارات", "tests_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("المهام", "tasks_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("النهائي", "final_exam_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("النتيجة", "result_desc", state.adminReportFilters[targetKey].sort)}</th>
               <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الحالة</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 bg-white">
-            ${teachers.map((teacher, index) => `
+            ${pageRows.map((teacher, index) => `
               <tr class="hover:bg-slate-50/80">
-                <td class="px-3 py-3 align-middle font-semibold text-slate-500 whitespace-nowrap">${index + 1}</td>
+                <td class="px-3 py-3 align-middle font-semibold text-slate-500 whitespace-nowrap">${startIndex + index + 1}</td>
                 <td class="px-3 py-3 align-middle font-bold text-slate-900 whitespace-nowrap">${teacher.name}</td>
                 <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.supervisor_name || "—"}</td>
                 <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.reader_name || "—"}</td>
@@ -368,30 +421,33 @@ function reportTableHtml(teachers, label) {
           </tbody>
         </table>
       </div>
+
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="text-xs font-semibold text-slate-500">صفحة ${currentPage} من ${totalPages}</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" data-admin-page-target="${targetKey}" data-page-action="prev" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100 ${currentPage <= 1 ? "pointer-events-none opacity-50" : ""}">السابق</button>
+          ${Array.from({ length: totalPages }).slice(0, 7).map((_, idx) => {
+            let pageNumber = idx + 1;
+            if (totalPages > 7 && currentPage > 4) {
+              pageNumber = currentPage - 3 + idx;
+              if (pageNumber > totalPages) pageNumber = totalPages - (6 - idx);
+            }
+            return `<button type="button" data-admin-page-target="${targetKey}" data-page-action="go" data-page-number="${pageNumber}" class="rounded-2xl px-4 py-2 text-sm font-bold ${pageNumber === currentPage ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}">${pageNumber}</button>`;
+          }).join("")}
+          <button type="button" data-admin-page-target="${targetKey}" data-page-action="next" class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100 ${currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}">التالي</button>
+        </div>
+      </div>
     </div>
   `;
 }
-
 
 function renderAdminNamedReports() {
   const maleEl = document.getElementById("admin-male-report-table");
   const femaleEl = document.getElementById("admin-female-report-table");
   if (!maleEl || !femaleEl) return;
 
-  const maleList = filterAndSortTeachers(
-    state.adminNamedReports.male || [],
-    state.adminReportFilters.male.search,
-    state.adminReportFilters.male.sort
-  );
-
-  const femaleList = filterAndSortTeachers(
-    state.adminNamedReports.female || [],
-    state.adminReportFilters.female.search,
-    state.adminReportFilters.female.sort
-  );
-
-  maleEl.innerHTML = reportTableHtml(maleList, "بيان تفصيلي للمعلمين");
-  femaleEl.innerHTML = reportTableHtml(femaleList, "بيان تفصيلي للمعلمات");
+  maleEl.innerHTML = reportTableHtml("male", "بيان تفصيلي للمعلمين");
+  femaleEl.innerHTML = reportTableHtml("female", "بيان تفصيلي للمعلمات");
 }
 
 
@@ -840,8 +896,7 @@ function downloadCsv(filename, rows) {
 }
 
 function exportAdminCsv(targetKey = "male") {
-  const filters = state.adminReportFilters[targetKey] || { search: "", sort: "name_asc" };
-  const list = filterAndSortTeachers(state.adminNamedReports[targetKey] || [], filters.search, filters.sort);
+  const { filtered: list } = getAdminReportPrepared(targetKey);
   if (!list.length) {
     showToast("لا توجد بيانات للتصدير");
     return;
@@ -979,6 +1034,39 @@ async function initAppPage() {
     button.addEventListener("click", () => exportAdminCsv(button.dataset.exportTarget));
   });
 
+  document.getElementById("admin-main-section")?.addEventListener("click", (event) => {
+    const sortButton = event.target.closest("button[data-admin-sort-target]");
+    if (sortButton) {
+      const targetKey = sortButton.dataset.adminSortTarget;
+      state.adminReportFilters[targetKey].sort = sortButton.dataset.sortValue || "name_asc";
+      state.adminReportFilters[targetKey].page = 1;
+      const linkedSelect = document.getElementById(`admin-${targetKey}-sort`);
+      if (linkedSelect) linkedSelect.value = state.adminReportFilters[targetKey].sort;
+      renderAdminNamedReports();
+      return;
+    }
+
+    const pageButton = event.target.closest("button[data-admin-page-target]");
+    if (pageButton) {
+      const targetKey = pageButton.dataset.adminPageTarget;
+      const action = pageButton.dataset.pageAction;
+      const prepared = getAdminReportPrepared(targetKey);
+      if (action === "prev") state.adminReportFilters[targetKey].page = Math.max(1, prepared.currentPage - 1);
+      if (action === "next") state.adminReportFilters[targetKey].page = Math.min(prepared.totalPages, prepared.currentPage + 1);
+      if (action === "go") state.adminReportFilters[targetKey].page = Number(pageButton.dataset.pageNumber || 1);
+      renderAdminNamedReports();
+    }
+  });
+
+  document.getElementById("admin-main-section")?.addEventListener("change", (event) => {
+    const pageSizeSelect = event.target.closest("select[data-admin-pagesize-target]");
+    if (!pageSizeSelect) return;
+    const targetKey = pageSizeSelect.dataset.adminPagesizeTarget;
+    state.adminReportFilters[targetKey].pageSize = Number(pageSizeSelect.value || 10);
+    state.adminReportFilters[targetKey].page = 1;
+    renderAdminNamedReports();
+  });
+
   document.getElementById("refresh-btn")?.addEventListener("click", async () => {
     await loadDashboardData({ showSkeleton: false });
     if (state.user.role === "admin") await loadReferenceUsers();
@@ -1003,21 +1091,25 @@ async function initAppPage() {
 
   document.getElementById("admin-male-search")?.addEventListener("input", (event) => {
     state.adminReportFilters.male.search = event.target.value;
+    state.adminReportFilters.male.page = 1;
     renderAdminNamedReports();
   });
 
   document.getElementById("admin-male-sort")?.addEventListener("change", (event) => {
     state.adminReportFilters.male.sort = event.target.value;
+    state.adminReportFilters.male.page = 1;
     renderAdminNamedReports();
   });
 
   document.getElementById("admin-female-search")?.addEventListener("input", (event) => {
     state.adminReportFilters.female.search = event.target.value;
+    state.adminReportFilters.female.page = 1;
     renderAdminNamedReports();
   });
 
   document.getElementById("admin-female-sort")?.addEventListener("change", (event) => {
     state.adminReportFilters.female.sort = event.target.value;
+    state.adminReportFilters.female.page = 1;
     renderAdminNamedReports();
   });
 
