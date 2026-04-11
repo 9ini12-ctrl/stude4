@@ -383,20 +383,54 @@ function reportTableHtml(targetKey, label) {
         </div>
       </div>
 
-      <div class="overflow-x-auto overscroll-x-contain rounded-3xl border border-slate-200 bg-white">
-        <table class="min-w-[640px] md:min-w-[940px] xl:min-w-[1200px] divide-y divide-slate-200 text-sm">
+      <div class="space-y-3 md:hidden">
+        ${pageRows.map((teacher, index) => `
+          <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-slate-400">#${startIndex + index + 1}</div>
+                <div class="mt-1 truncate text-base font-extrabold text-slate-900">${teacher.name}</div>
+                <div class="mt-1 text-xs text-slate-500">${teacher.supervisor_name || "—"}</div>
+              </div>
+              <span class="inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
+            </div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <div class="text-[11px] text-slate-500">الأجزاء</div>
+                <div class="mt-1 text-sm font-extrabold text-slate-800">${formatPercent(teacher.metrics?.partsPercent)}</div>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <div class="text-[11px] text-slate-500">النهائي</div>
+                <div class="mt-1 text-sm font-extrabold text-slate-800">${formatPercent(teacher.metrics?.finalExamPercent)}</div>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <div class="text-[11px] text-slate-500">الحضور</div>
+                <div class="mt-1 text-sm font-extrabold text-slate-800">${formatPercent(teacher.metrics?.attendancePercent)}</div>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <div class="text-[11px] text-slate-500">المهام</div>
+                <div class="mt-1 text-sm font-extrabold text-slate-800">${formatPercent(teacher.metrics?.tasksPercent)}</div>
+              </div>
+            </div>
+            <div class="mt-3">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</div>
+          </article>
+        `).join("")}
+      </div>
+
+      <div class="hidden md:block overflow-x-auto overscroll-x-contain rounded-3xl border border-slate-200 bg-white">
+        <table class="w-full lg:min-w-[960px] xl:min-w-[1180px] divide-y divide-slate-200 text-sm">
           <thead class="sticky top-0 z-10 bg-slate-50 text-slate-600">
             <tr>
               <th class="px-3 py-3 text-right whitespace-nowrap">#</th>
               <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الاسم", "name_asc", state.adminReportFilters[targetKey].sort)}</th>
-              <th class="hidden lg:table-cell px-3 py-3 text-right font-bold whitespace-nowrap">المشرف</th>
-              <th class="hidden lg:table-cell px-3 py-3 text-right font-bold whitespace-nowrap">المقرئ</th>
-              <th class="hidden md:table-cell px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الأجزاء", "parts_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الأجزاء", "parts_desc", state.adminReportFilters[targetKey].sort)}</th>
               <th class="hidden lg:table-cell px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الحضور", "attendance_desc", state.adminReportFilters[targetKey].sort)}</th>
               <th class="hidden lg:table-cell px-3 py-3 text-right whitespace-nowrap">${sortableHeader("الاختبارات", "tests_desc", state.adminReportFilters[targetKey].sort)}</th>
               <th class="hidden lg:table-cell px-3 py-3 text-right whitespace-nowrap">${sortableHeader("المهام", "tasks_desc", state.adminReportFilters[targetKey].sort)}</th>
-              <th class="hidden md:table-cell px-3 py-3 text-right whitespace-nowrap">${sortableHeader("النهائي", "final_exam_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("النهائي", "final_exam_desc", state.adminReportFilters[targetKey].sort)}</th>
               <th class="px-3 py-3 text-right whitespace-nowrap">${sortableHeader("النتيجة", "result_desc", state.adminReportFilters[targetKey].sort)}</th>
+              <th class="hidden xl:table-cell px-3 py-3 text-right font-bold whitespace-nowrap">المشرف</th>
+              <th class="hidden xl:table-cell px-3 py-3 text-right font-bold whitespace-nowrap">المقرئ</th>
               <th class="px-3 py-3 text-right font-bold whitespace-nowrap">الحالة</th>
             </tr>
           </thead>
@@ -405,16 +439,16 @@ function reportTableHtml(targetKey, label) {
               <tr class="hover:bg-slate-50/80">
                 <td class="px-3 py-3 align-middle font-semibold text-slate-500 whitespace-nowrap">${startIndex + index + 1}</td>
                 <td class="px-3 py-3 align-middle font-bold text-slate-900 whitespace-nowrap max-w-[220px] truncate">${teacher.name}</td>
-                <td class="hidden lg:table-cell px-3 py-3 align-middle whitespace-nowrap max-w-[180px] truncate">${teacher.supervisor_name || "—"}</td>
-                <td class="hidden lg:table-cell px-3 py-3 align-middle whitespace-nowrap max-w-[180px] truncate">${teacher.reader_name || "—"}</td>
-                <td class="hidden md:table-cell px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.partsPercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.partsPercent)}</td>
                 <td class="hidden lg:table-cell px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.attendancePercent)}</td>
                 <td class="hidden lg:table-cell px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.testsPercent)}</td>
                 <td class="hidden lg:table-cell px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.tasksPercent)}</td>
-                <td class="hidden md:table-cell px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${formatPercent(teacher.metrics?.finalExamPercent)}</td>
                 <td class="px-3 py-3 align-middle whitespace-nowrap">
                   <span class="inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${resultTone(teacher.metrics?.finalResult)}">${formatPercent(teacher.metrics?.finalResult)}</span>
                 </td>
+                <td class="hidden xl:table-cell px-3 py-3 align-middle whitespace-nowrap max-w-[180px] truncate">${teacher.supervisor_name || "—"}</td>
+                <td class="hidden xl:table-cell px-3 py-3 align-middle whitespace-nowrap max-w-[180px] truncate">${teacher.reader_name || "—"}</td>
                 <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
               </tr>
             `).join("")}
@@ -424,17 +458,19 @@ function reportTableHtml(targetKey, label) {
 
       <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div class="text-xs font-semibold text-slate-500">صفحة ${currentPage} من ${totalPages}</div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button type="button" data-admin-page-target="${targetKey}" data-page-action="prev" class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 sm:px-4 sm:text-sm ${currentPage <= 1 ? "pointer-events-none opacity-50" : ""}">السابق</button>
-          ${Array.from({ length: totalPages }).slice(0, 7).map((_, idx) => {
-            let pageNumber = idx + 1;
-            if (totalPages > 7 && currentPage > 4) {
-              pageNumber = currentPage - 3 + idx;
-              if (pageNumber > totalPages) pageNumber = totalPages - (6 - idx);
-            }
-            return `<button type="button" data-admin-page-target="${targetKey}" data-page-action="go" data-page-number="${pageNumber}" class="rounded-2xl px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm ${pageNumber === currentPage ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}">${pageNumber}</button>`;
-          }).join("")}
-          <button type="button" data-admin-page-target="${targetKey}" data-page-action="next" class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 sm:px-4 sm:text-sm ${currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}">التالي</button>
+        <div class="overflow-x-auto">
+          <div class="flex min-w-max items-center gap-2">
+            <button type="button" data-admin-page-target="${targetKey}" data-page-action="prev" class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 sm:px-4 sm:text-sm ${currentPage <= 1 ? "pointer-events-none opacity-50" : ""}">السابق</button>
+            ${Array.from({ length: totalPages }).slice(0, 7).map((_, idx) => {
+              let pageNumber = idx + 1;
+              if (totalPages > 7 && currentPage > 4) {
+                pageNumber = currentPage - 3 + idx;
+                if (pageNumber > totalPages) pageNumber = totalPages - (6 - idx);
+              }
+              return `<button type="button" data-admin-page-target="${targetKey}" data-page-action="go" data-page-number="${pageNumber}" class="rounded-2xl px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm ${pageNumber === currentPage ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"}">${pageNumber}</button>`;
+            }).join("")}
+            <button type="button" data-admin-page-target="${targetKey}" data-page-action="next" class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 sm:px-4 sm:text-sm ${currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}">التالي</button>
+          </div>
         </div>
       </div>
     </div>
