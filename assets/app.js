@@ -240,18 +240,18 @@ function renderMetricCards(gridId, cards = [], columnsClass = "sm:grid-cols-2 xl
 function renderSummaryGrid(summary) {
   const overallCards = state.user?.role === "admin"
     ? [
-        { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
+        { label: "إجمالي المعلمين/ات", value: summary.totalTeachers, progress: summary.averageFinalResult },
         { label: "إجمالي المعلمين", value: state.adminNamedReports.male.length, progress: summarizeTeachers(state.adminNamedReports.male).averageFinalResult },
         { label: "إجمالي المعلمات", value: state.adminNamedReports.female.length, progress: summarizeTeachers(state.adminNamedReports.female).averageFinalResult },
-        { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
+        { label: "المجازون/ات / الخريجون/ات", value: summary.graduatedCount, progress: summary.averageParts },
         { label: "متوسط الأداء العام", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
-        { label: "متوسط النهائي العام", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
+        { label: "متوسط الاختبار النهائي ", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
       ]
     : [
-        { label: "إجمالي الأسماء", value: summary.totalTeachers, progress: summary.averageFinalResult },
-        { label: "المجازون / المجازات", value: summary.graduatedCount, progress: summary.averageParts },
+        { label: "إجمالي المعلمين / ات", value: summary.totalTeachers, progress: summary.averageFinalResult },
+        { label: "المجازون/ات / الخريجون/ات", value: summary.graduatedCount, progress: summary.averageParts },
         { label: "متوسط الأداء", value: formatPercent(summary.averageFinalResult), progress: summary.averageFinalResult },
-        { label: "متوسط النهائي", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
+        { label: "متوسط الاختبار النهائي", value: formatPercent(summary.averageFinalExam), progress: summary.averageFinalExam }
       ];
 
   renderMetricCards(
@@ -281,7 +281,7 @@ function renderAdminSplitSummaries() {
     { label: "متوسط الاختبارات", value: formatPercent(maleSummary.averageTests), progress: maleSummary.averageTests },
     { label: "متوسط المهام", value: formatPercent(maleSummary.averageTasks), progress: maleSummary.averageTasks },
     { label: "متوسط النهائي", value: formatPercent(maleSummary.averageFinalExam), progress: maleSummary.averageFinalExam },
-    { label: "متوسط النتيجة", value: formatPercent(maleSummary.averageFinalResult), progress: maleSummary.averageFinalResult },
+    { label: "متوسط الأداء ", value: formatPercent(maleSummary.averageFinalResult), progress: maleSummary.averageFinalResult },
     { label: "متوسط الأجزاء", value: formatPercent(maleSummary.averageParts), progress: maleSummary.averageParts }
   ], "sm:grid-cols-2");
 
@@ -292,7 +292,7 @@ function renderAdminSplitSummaries() {
     { label: "متوسط الاختبارات", value: formatPercent(femaleSummary.averageTests), progress: femaleSummary.averageTests },
     { label: "متوسط المهام", value: formatPercent(femaleSummary.averageTasks), progress: femaleSummary.averageTasks },
     { label: "متوسط النهائي", value: formatPercent(femaleSummary.averageFinalExam), progress: femaleSummary.averageFinalExam },
-    { label: "متوسط النتيجة", value: formatPercent(femaleSummary.averageFinalResult), progress: femaleSummary.averageFinalResult },
+    { label: "متوسط الاداء ", value: formatPercent(femaleSummary.averageFinalResult), progress: femaleSummary.averageFinalResult },
     { label: "متوسط الأجزاء", value: formatPercent(femaleSummary.averageParts), progress: femaleSummary.averageParts }
   ], "sm:grid-cols-2");
 }
