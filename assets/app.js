@@ -412,7 +412,7 @@ function reportTableHtml(targetKey, label) {
                 <div class="mt-1 text-sm font-extrabold text-slate-800">${formatPercent(teacher.metrics?.tasksPercent)}</div>
               </div>
             </div>
-            <div class="mt-3">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</div>
+            <div class="mt-3">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">خريج/ة /مجاز/ة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</div>
           </article>
         `).join("")}
       </div>
@@ -449,7 +449,7 @@ function reportTableHtml(targetKey, label) {
                 </td>
                 <td class="hidden xl:table-cell px-3 py-3 align-middle whitespace-nowrap max-w-[180px] truncate">${teacher.supervisor_name || "—"}</td>
                 <td class="hidden xl:table-cell px-3 py-3 align-middle whitespace-nowrap max-w-[180px] truncate">${teacher.reader_name || "—"}</td>
-                <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مجاز / مجازة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
+                <td class="px-3 py-3 align-middle whitespace-nowrap">${teacher.is_graduated ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">خريج/ة /مجاز/ة</span>' : '<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">نشط</span>'}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -694,7 +694,7 @@ function renderTeacherList() {
             <div>
               <h3 class="text-lg font-extrabold">${teacher.name}</h3>
               <div class="mt-1 flex flex-wrap gap-2">
-                ${teacher.is_graduated ? '<span class="badge badge-success">مجاز / مجازة</span>' : '<span class="badge badge-neutral">نشط</span>'}
+                ${teacher.is_graduated ? '<span class="badge badge-success">خريج/ة /مجاز/ة</span>' : '<span class="badge badge-neutral">نشط</span>'}
                 <span class="badge ${teacher.gender === "female" ? "badge-danger" : "badge-neutral"}">${teacher.gender === "female" ? "معلمة" : "معلم"}</span>
               </div>
             </div>
@@ -963,7 +963,7 @@ function exportAdminCsv(targetKey = "male") {
     formatPercent(teacher.metrics?.tasksPercent),
     formatPercent(teacher.metrics?.finalExamPercent),
     formatPercent(teacher.metrics?.finalResult),
-    teacher.is_graduated ? "مجاز / مجازة" : "نشط"
+    teacher.is_graduated ? "خريج/ة /مجاز/ة" : "نشط"
   ])];
 
   const filename = targetKey === "female" ? "بيان-المعلمات.csv" : "بيان-المعلمين.csv";
