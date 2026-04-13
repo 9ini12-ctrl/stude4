@@ -1426,12 +1426,196 @@ function chipsHtml(numbers = [], prefix = "") {
   `).join("");
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function certificatePreviewHtml(teacher = {}) {
+  const teacherName = escapeHtml(teacher.name || "—");
+  const finalScore = Math.max(0, Math.min(100, Number(teacher.final_score || 0)));
+  const issueDate = new Date().toLocaleDateString("ar-SA");
+
+  return `
+    <div class="rounded-[1.6rem] border border-slate-200 bg-white p-5 md:p-6">
+      <div class="mb-6 flex items-center justify-center gap-3">
+        <div class="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2">
+          <img src="/assets/logo1.png" alt="شعار المنصة" class="h-12 w-auto object-contain" loading="lazy" onerror="this.style.display='none'" />
+        </div>
+        <div class="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2">
+          <img src="/assets/logo2.png" alt="شعار الجهة" class="h-12 w-auto object-contain" loading="lazy" onerror="this.style.display='none'" />
+        </div>
+      </div>
+      <div class="text-center">
+        <div class="text-xs font-bold tracking-wide text-slate-400">شهادة مبدئية</div>
+        <h3 class="mt-2 text-2xl font-extrabold text-slate-900">شهادة اجتياز</h3>
+        <p class="mt-4 text-sm leading-7 text-slate-600">
+          تشهد منصة رخصة ممارس أن المعلم / المعلمة:
+        </p>
+        <div class="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-xl font-black text-slate-900">${teacherName}</div>
+        <p class="mt-4 text-sm leading-7 text-slate-600">
+          قد أكمل متطلبات البرنامج، وحقق في الاختبار النهائي الدرجة التالية:
+        </p>
+        <div class="mt-3 inline-flex items-center justify-center rounded-full bg-emerald-100 px-5 py-2 text-lg font-black text-emerald-700">${Math.round(finalScore)} / 100</div>
+        <div class="mt-5 text-xs text-slate-500">تاريخ الإصدار: ${issueDate}</div>
+      </div>
+    </div>
+  `;
+}
+
+function printTeacherCertificate(teacher = {}) {
+  const teacherName = escapeHtml(teacher.name || "—");
+  const finalScore = Math.max(0, Math.min(100, Number(teacher.final_score || 0)));
+  const issueDate = new Date().toLocaleDateString("ar-SA");
+  const logo1 = `${window.location.origin}/assets/logo1.png`;
+  const logo2 = `${window.location.origin}/assets/logo2.png`;
+
+  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=960,height=700");
+  if (!printWindow) {
+    alert("تعذر فتح نافذة الطباعة. اسمح للنوافذ المنبثقة ثم حاول مرة أخرى.");
+    return;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>شهادة اجتياز</title>
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          padding: 28px;
+          font-family: "IBM Plex Sans Arabic", Arial, sans-serif;
+          background: #f8fafc;
+          color: #0f172a;
+        }
+        .sheet {
+          max-width: 900px;
+          margin: 0 auto;
+          background: white;
+          border: 2px solid #cbd5e1;
+          border-radius: 28px;
+          padding: 36px;
+        }
+        .logos {
+          display: flex;
+          justify-content: center;
+          gap: 18px;
+          margin-bottom: 28px;
+        }
+        .logo-box {
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 10px 14px;
+          background: #fff;
+        }
+        .logo-box img {
+          height: 54px;
+          width: auto;
+          display: block;
+        }
+        .sub {
+          text-align: center;
+          font-size: 12px;
+          color: #64748b;
+          letter-spacing: .08em;
+          font-weight: 700;
+        }
+        h1 {
+          text-align: center;
+          margin: 10px 0 0;
+          font-size: 36px;
+        }
+        p {
+          text-align: center;
+          font-size: 18px;
+          line-height: 1.9;
+          margin: 18px 0 0;
+        }
+        .name {
+          margin: 16px auto 0;
+          max-width: 560px;
+          text-align: center;
+          font-size: 34px;
+          font-weight: 800;
+          color: #0f172a;
+          border-bottom: 2px dashed #94a3b8;
+          padding-bottom: 10px;
+        }
+        .score {
+          margin: 20px auto 0;
+          width: fit-content;
+          font-size: 26px;
+          font-weight: 800;
+          color: #166534;
+          background: #dcfce7;
+          border-radius: 999px;
+          padding: 10px 20px;
+        }
+        .foot {
+          margin-top: 28px;
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          color: #64748b;
+          font-size: 14px;
+        }
+        @media print {
+          body { padding: 0; background: white; }
+          .sheet {
+            border-radius: 0;
+            border: none;
+            min-height: 100vh;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <main class="sheet">
+        <div class="logos">
+          <div class="logo-box"><img src="${logo1}" alt="Logo 1" /></div>
+          <div class="logo-box"><img src="${logo2}" alt="Logo 2" /></div>
+        </div>
+        <div class="sub">شهادة مبدئية</div>
+        <h1>شهادة اجتياز</h1>
+        <p>تشهد منصة رخصة ممارس أن المعلم / المعلمة:</p>
+        <div class="name">${teacherName}</div>
+        <p>قد أكمل متطلبات البرنامج بنجاح، وكانت درجة الاختبار النهائي:</p>
+        <div class="score">${Math.round(finalScore)} / 100</div>
+        <div class="foot">
+          <span>تاريخ الإصدار: ${issueDate}</span>
+          <span>وثيقة مبدئية</span>
+        </div>
+      </main>
+      <script>
+        window.onload = function () {
+          window.print();
+        };
+      </script>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
+
 function initTeacherPublicPage() {
   const form = document.getElementById("teacher-pin-form");
   const input = document.getElementById("teacher-pin-input");
   const messageEl = document.getElementById("teacher-pin-message");
   const resultWrap = document.getElementById("teacher-public-result");
   if (!form || !input || !messageEl || !resultWrap) return;
+  let activeTeacher = null;
+  let canPrintCertificate = false;
 
   const setMessage = (message, isError = false) => {
     messageEl.textContent = message || "";
@@ -1440,6 +1624,16 @@ function initTeacherPublicPage() {
 
   input.addEventListener("input", () => {
     input.value = String(input.value || "").replace(/\D/g, "").slice(0, 4);
+  });
+
+  resultWrap.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action='print-certificate']");
+    if (!button) return;
+    if (!activeTeacher || !canPrintCertificate) {
+      setMessage("الطباعة متاحة بعد اكتمال الاختبار النهائي.", true);
+      return;
+    }
+    printTeacherCertificate(activeTeacher);
   });
 
   form.addEventListener("submit", async (event) => {
@@ -1463,6 +1657,8 @@ function initTeacherPublicPage() {
 
       const teacher = result.teacher || {};
       const pending = result.pending || {};
+      activeTeacher = teacher;
+      canPrintCertificate = Boolean(pending.hasFinalExam);
 
       const pendingCards = [
         { label: "الأجزاء المتبقية", count: (pending.missingParts || []).length },
@@ -1544,10 +1740,24 @@ function initTeacherPublicPage() {
             </div>
           </div>
         </section>
+
+        ${pending.hasFinalExam ? `
+          <section class="glass-card rounded-[2rem] p-5 md:p-6">
+            <div class="section-title">
+              <h2>الشهادة المبدئية</h2>
+              <button type="button" data-action="print-certificate" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">طباعة الشهادة</button>
+            </div>
+            <div class="mt-5">
+              ${certificatePreviewHtml(teacher)}
+            </div>
+          </section>
+        ` : ""}
       `;
 
       setMessage("تم تحميل بياناتك بنجاح.");
     } catch (error) {
+      activeTeacher = null;
+      canPrintCertificate = false;
       resultWrap.innerHTML = "";
       setMessage(error.message || "تعذر تحميل البيانات", true);
     }

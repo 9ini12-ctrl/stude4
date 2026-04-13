@@ -46,7 +46,9 @@ exports.handler = async (event) => {
     const attendance = teacher.attendance || {};
     const tasks = teacher.tasks || {};
 
-    const missingParts = toMissingNumbers(30, recitations);
+    const missingParts = teacher.is_graduated
+      ? []
+      : toMissingNumbers(30, recitations);
     const missingAttendance = toMissingNumbers(
       12,
       Object.fromEntries(Object.entries(attendance).map(([day, row]) => [day, !!row.present]))
