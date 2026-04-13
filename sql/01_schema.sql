@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS teachers (
   reader_id UUID REFERENCES users(id) ON DELETE SET NULL,
   gender TEXT NOT NULL CHECK (gender IN ('male', 'female')),
   is_graduated BOOLEAN NOT NULL DEFAULT FALSE,
+  public_pin CHAR(4) UNIQUE CHECK (public_pin ~ '^[0-9]{4}$'),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

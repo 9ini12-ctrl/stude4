@@ -55,6 +55,15 @@ exports.handler = async (event) => {
       updates.push(`name = $${params.length}`);
     }
 
+    if (body.public_pin !== undefined) {
+      const pin = String(body.public_pin || "").trim();
+      if (!/^\d{4}$/.test(pin)) {
+        throw Object.assign(new Error("رمز الدخول يجب أن يكون 4 أرقام"), { statusCode: 400 });
+      }
+      params.push(pin);
+      updates.push(`public_pin = $${params.length}`);
+    }
+
     if (!updates.length) {
       throw Object.assign(new Error("لا توجد بيانات للتحديث"), { statusCode: 400 });
     }
@@ -68,6 +77,9 @@ exports.handler = async (event) => {
 
     return ok({ success: true });
   } catch (err) {
+    if (String(err.message || "").includes("duplicate key")) {
+      return handlerErrorResponse(Object.assign(new Error("رمز الدخول مستخدم من معلم/معلمة آخر"), { statusCode: 409 }));
+    }
     return handlerErrorResponse(err);
   }
 };

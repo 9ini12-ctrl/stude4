@@ -576,6 +576,7 @@ function renderTeacherList() {
   container.innerHTML = teachersSorted.map((teacher, index) => {
     const canManage = state.user.role === "admin" || state.user.role === "supervisor";
     const canReassignReader = state.user.role === "supervisor" && state.teacherViewMode === "report";
+    const canSetPublicPin = canManage && state.teacherViewMode === "report";
     const eligibleReaders = canReassignReader
       ? state.readers.filter((reader) => reader.gender === teacher.gender)
       : [];
@@ -626,8 +627,27 @@ function renderTeacherList() {
       </div>
     ` : "";
 
+    const pinControl = canSetPublicPin ? `
+      <div class="rounded-2xl border border-slate-200 bg-white p-3">
+        <label class="mb-2 block text-xs font-bold text-slate-600">رمز دخول المعلم/المعلمة (4 أرقام)</label>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="4"
+            data-pin-input="${teacher.id}"
+            value="${teacher.public_pin || ""}"
+            placeholder="0000"
+            class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold tracking-[0.25em] text-slate-900"
+          />
+          <button type="button" data-action="save-public-pin" data-teacher="${teacher.id}" class="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700 sm:shrink-0">حفظ الرمز</button>
+        </div>
+      </div>
+    ` : "";
+
     const actionButtons = `
       <div class="space-y-3">
+        ${pinControl}
         ${readerTransferControl}
         <div class="flex flex-wrap gap-2">
           ${canManage ? `<button type="button" data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-xs font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء خريج/مجاز" : "اعتماد خريج/مجاز"}</button>` : ""}
@@ -1233,6 +1253,12 @@ async function initAppPage() {
     `).join("");
   });
 
+  document.getElementById("teachers-list")?.addEventListener("input", (event) => {
+    const pinInput = event.target.closest("input[data-pin-input]");
+    if (!pinInput) return;
+    pinInput.value = String(pinInput.value || "").replace(/\D/g, "").slice(0, 4);
+  });
+
   document.getElementById("teachers-list")?.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
@@ -1275,6 +1301,27 @@ async function initAppPage() {
         });
         refreshVisibleViews();
         showToast("تم تحديث المهمة");
+      }
+
+      if (action === "save-public-pin") {
+        const pinInput = document.querySelector(`[data-pin-input="${teacherId}"]`);
+        const pin = String(pinInput?.value || "").trim();
+
+        if (!/^\d{4}$/.test(pin)) {
+          throw new Error("رمز الدخول يجب أن يكون 4 أرقام");
+        }
+
+        await api("teachers-update", {
+          method: "POST",
+          body: JSON.stringify({ teacher_id: teacherId, public_pin: pin })
+        });
+
+        applyTeacherMutation(teacherId, (teacher) => {
+          teacher.public_pin = pin;
+        });
+
+        refreshVisibleViews();
+        showToast("تم حفظ رمز الدخول");
       }
 
       if (action === "save-reader") {
@@ -1370,6 +1417,143 @@ function publicBlockHtml(group) {
   `;
 }
 
+function chipsHtml(numbers = [], prefix = "") {
+  if (!numbers.length) {
+    return `<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">مكتمل</span>`;
+  }
+  return numbers.map((number) => `
+    <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">${prefix ? `${prefix} ` : ""}${number}</span>
+  `).join("");
+}
+
+function initTeacherPublicPage() {
+  const form = document.getElementById("teacher-pin-form");
+  const input = document.getElementById("teacher-pin-input");
+  const messageEl = document.getElementById("teacher-pin-message");
+  const resultWrap = document.getElementById("teacher-public-result");
+  if (!form || !input || !messageEl || !resultWrap) return;
+
+  const setMessage = (message, isError = false) => {
+    messageEl.textContent = message || "";
+    messageEl.className = `mt-3 text-sm font-medium ${isError ? "text-rose-600" : "text-slate-500"}`;
+  };
+
+  input.addEventListener("input", () => {
+    input.value = String(input.value || "").replace(/\D/g, "").slice(0, 4);
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const pin = String(input.value || "").replace(/\D/g, "").slice(0, 4);
+    input.value = pin;
+
+    if (!/^\d{4}$/.test(pin)) {
+      setMessage("أدخل رمزًا مكوّنًا من 4 أرقام.", true);
+      return;
+    }
+
+    setMessage("جارٍ تحميل بياناتك...");
+    resultWrap.innerHTML = teacherSkeleton(1);
+
+    try {
+      const result = await api("teacher-public-lookup", {
+        method: "POST",
+        body: JSON.stringify({ pin })
+      });
+
+      const teacher = result.teacher || {};
+      const pending = result.pending || {};
+
+      const pendingCards = [
+        { label: "الأجزاء المتبقية", count: (pending.missingParts || []).length },
+        { label: "أيام حضور غير مكتملة", count: (pending.missingAttendance || []).length },
+        { label: "اختبارات قبلية غير مكتملة", count: (pending.missingPreTests || []).length },
+        { label: "اختبارات بعدية غير مكتملة", count: (pending.missingPostTests || []).length },
+        { label: "المهام المتبقية", count: (pending.missingTasks || []).length },
+        { label: "الاختبار النهائي", count: pending.hasFinalExam ? 0 : 1 }
+      ];
+
+      resultWrap.innerHTML = `
+        <section class="glass-card rounded-[2rem] p-5 md:p-6 fade-in">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 class="text-2xl font-extrabold">${teacher.name || "—"}</h2>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <span class="badge ${teacher.gender === "female" ? "badge-danger" : "badge-neutral"}">${teacher.gender === "female" ? "معلمة" : "معلم"}</span>
+                ${teacher.is_graduated ? '<span class="badge badge-success">خريج/ة /مجاز/ة</span>' : '<span class="badge badge-neutral">نشط</span>'}
+              </div>
+              <div class="mt-3 text-sm text-slate-600">المشرف: <span class="font-bold text-slate-900">${teacher.supervisor_name || "—"}</span></div>
+              <div class="mt-1 text-sm text-slate-600">المقرئ: <span class="font-bold text-slate-900">${teacher.reader_name || "—"}</span></div>
+            </div>
+            <div class="rounded-3xl border border-slate-200 bg-white p-4 text-center">
+              <div class="text-xs text-slate-500">النتيجة النهائية</div>
+              <div class="mt-2 text-3xl font-extrabold text-slate-900">${formatPercent(teacher.metrics?.finalResult)}</div>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-3 md:grid-cols-2">
+            ${progressHtml("الأجزاء", teacher.metrics?.partsPercent)}
+            ${progressHtml("الحضور", teacher.metrics?.attendancePercent)}
+            ${progressHtml("الاختبارات", teacher.metrics?.testsPercent)}
+            ${progressHtml("المهام", teacher.metrics?.tasksPercent)}
+            ${progressHtml("النهائي", teacher.metrics?.finalExamPercent)}
+            ${progressHtml("النتيجة النهائية", teacher.metrics?.finalResult)}
+          </div>
+        </section>
+
+        <section class="glass-card rounded-[2rem] p-5 md:p-6">
+          <div class="section-title">
+            <h2>ما لم يُنجز بعد</h2>
+            <span class="text-xs text-slate-500">قائمة البنود المتبقية</span>
+          </div>
+          <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            ${pendingCards.map((item) => `
+              <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs font-semibold text-slate-500">${item.label}</div>
+                <div class="mt-2 text-2xl font-extrabold ${item.count ? "text-rose-600" : "text-emerald-600"}">${item.count}</div>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="mt-5 space-y-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="mb-2 text-sm font-bold text-slate-800">الأجزاء غير المنجزة</div>
+              <div class="flex flex-wrap gap-2">${chipsHtml(pending.missingParts, "جزء")}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="mb-2 text-sm font-bold text-slate-800">أيام الحضور غير المسجلة</div>
+              <div class="flex flex-wrap gap-2">${chipsHtml(pending.missingAttendance, "يوم")}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="mb-2 text-sm font-bold text-slate-800">الاختبارات القبلية غير المنجزة</div>
+              <div class="flex flex-wrap gap-2">${chipsHtml(pending.missingPreTests, "يوم")}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="mb-2 text-sm font-bold text-slate-800">الاختبارات البعدية غير المنجزة</div>
+              <div class="flex flex-wrap gap-2">${chipsHtml(pending.missingPostTests, "يوم")}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="mb-2 text-sm font-bold text-slate-800">المهام غير المنجزة</div>
+              <div class="flex flex-wrap gap-2">${chipsHtml(pending.missingTasks, "مهمة")}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="mb-2 text-sm font-bold text-slate-800">الاختبار النهائي</div>
+              ${pending.hasFinalExam
+                ? '<span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">تم إدخال الدرجة</span>'
+                : '<span class="inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">لم يتم إدخال الدرجة بعد</span>'}
+            </div>
+          </div>
+        </section>
+      `;
+
+      setMessage("تم تحميل بياناتك بنجاح.");
+    } catch (error) {
+      resultWrap.innerHTML = "";
+      setMessage(error.message || "تعذر تحميل البيانات", true);
+    }
+  });
+}
+
 async function initPublicPage() {
   const refreshBtn = document.getElementById("public-refresh-btn");
   if (!refreshBtn) return;
@@ -1432,4 +1616,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (document.getElementById("login-state")) await initIndexPage();
   if (document.getElementById("logout-btn")) await initAppPage();
   if (document.getElementById("public-refresh-btn")) await initPublicPage();
+  if (document.getElementById("teacher-pin-form")) initTeacherPublicPage();
 });

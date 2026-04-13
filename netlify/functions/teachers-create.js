@@ -2,6 +2,21 @@ const { query, withClient } = require("./_lib/db");
 const { ok, handleOptions, parseBody } = require("./_lib/response");
 const { requireAuth, requireRoles, handlerErrorResponse } = require("./_lib/auth");
 
+async function generateUniquePublicPin(client) {
+  const maxAttempts = 60;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const pin = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    const exists = await client.query(
+      `SELECT 1 FROM teachers WHERE public_pin = $1 LIMIT 1`,
+      [pin]
+    );
+    if (!exists.rows.length) return pin;
+  }
+  throw Object.assign(new Error("تعذر توليد رمز دخول فريد، حاول مرة أخرى"), {
+    statusCode: 500
+  });
+}
+
 exports.handler = async (event) => {
   const preflight = handleOptions(event);
   if (preflight) return preflight;
@@ -85,11 +100,12 @@ exports.handler = async (event) => {
     }
 
     const teacher = await withClient(async (client) => {
+      const publicPin = await generateUniquePublicPin(client);
       const insertTeacher = await client.query(`
-        INSERT INTO teachers (name, supervisor_id, reader_id, gender)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name
-      `, [name, supervisorId, finalReaderId, supervisorGender]);
+        INSERT INTO teachers (name, supervisor_id, reader_id, gender, public_pin)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, public_pin
+      `, [name, supervisorId, finalReaderId, supervisorGender, publicPin]);
 
       const teacherId = insertTeacher.rows[0].id;
       await client.query(`

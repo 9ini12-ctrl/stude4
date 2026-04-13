@@ -50,6 +50,7 @@ async function listTeachers(user, filters = {}) {
       t.reader_id,
       t.gender,
       t.is_graduated,
+      t.public_pin,
       t.created_at,
       s.name AS supervisor_name,
       r.name AS reader_name,
