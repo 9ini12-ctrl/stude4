@@ -181,3 +181,31 @@ body {
 .hidden-el {
   display: none !important;
 }
+
+@media print {
+  body.certificate-print-mode * {
+    visibility: hidden !important;
+  }
+
+  body.certificate-print-mode #teacher-certificate-section,
+  body.certificate-print-mode #teacher-certificate-section * {
+    visibility: visible !important;
+  }
+
+  body.certificate-print-mode #teacher-certificate-section {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 24px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  body.certificate-print-mode button[data-action="print-certificate"] {
+    display: none !important;
+  }
+}
