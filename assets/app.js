@@ -609,7 +609,7 @@ function renderTeacherList() {
 
     const actionButtons = `
       <div class="flex flex-wrap gap-2">
-        ${canManage ? `<button type="button" data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-xs font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء المجاز" : "اعتماد مجاز"}</button>` : ""}
+        ${canManage ? `<button type="button" data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-xs font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء خريج/مجاز" : "اعتماد خريج/مجاز"}</button>` : ""}
         ${(state.user.role === "admin" || state.user.role === "supervisor") ? `<button type="button" data-action="delete-teacher" data-teacher="${teacher.id}" class="rounded-2xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">حذف</button>` : ""}
       </div>
     `;
