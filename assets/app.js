@@ -575,6 +575,10 @@ function renderTeacherList() {
 
   container.innerHTML = teachersSorted.map((teacher, index) => {
     const canManage = state.user.role === "admin" || state.user.role === "supervisor";
+    const canReassignReader = state.user.role === "supervisor" && state.teacherViewMode === "report";
+    const eligibleReaders = canReassignReader
+      ? state.readers.filter((reader) => reader.gender === teacher.gender)
+      : [];
     const attendanceDays = Array.from({ length: 12 }).map((_, idx) => {
       const day = idx + 1;
       const row = teacher.attendance?.[day] || {};
@@ -607,10 +611,28 @@ function renderTeacherList() {
       `;
     }).join("");
 
+    const readerTransferControl = canReassignReader ? `
+      <div class="rounded-2xl border border-slate-200 bg-white p-3">
+        <label class="mb-2 block text-xs font-bold text-slate-600">نقل إلى مقرئ / مقرئة</label>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <select data-reader-input="${teacher.id}" class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm">
+            <option value="">بدون ربط</option>
+            ${eligibleReaders.map((reader) => `
+              <option value="${reader.id}" ${reader.id === teacher.reader_id ? "selected" : ""}>${reader.name}</option>
+            `).join("")}
+          </select>
+          <button type="button" data-action="save-reader" data-teacher="${teacher.id}" class="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700 sm:shrink-0">حفظ المقرئ</button>
+        </div>
+      </div>
+    ` : "";
+
     const actionButtons = `
-      <div class="flex flex-wrap gap-2">
-        ${canManage ? `<button type="button" data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-xs font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء خريج/مجاز" : "اعتماد خريج/مجاز"}</button>` : ""}
-        ${(state.user.role === "admin" || state.user.role === "supervisor") ? `<button type="button" data-action="delete-teacher" data-teacher="${teacher.id}" class="rounded-2xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">حذف</button>` : ""}
+      <div class="space-y-3">
+        ${readerTransferControl}
+        <div class="flex flex-wrap gap-2">
+          ${canManage ? `<button type="button" data-action="toggle-graduated" data-teacher="${teacher.id}" class="rounded-2xl bg-brand-600 px-4 py-2 text-xs font-bold text-white hover:bg-brand-700">${teacher.is_graduated ? "إلغاء خريج/مجاز" : "اعتماد خريج/مجاز"}</button>` : ""}
+          ${(state.user.role === "admin" || state.user.role === "supervisor") ? `<button type="button" data-action="delete-teacher" data-teacher="${teacher.id}" class="rounded-2xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">حذف</button>` : ""}
+        </div>
       </div>
     `;
 
@@ -1253,6 +1275,28 @@ async function initAppPage() {
         });
         refreshVisibleViews();
         showToast("تم تحديث المهمة");
+      }
+
+      if (action === "save-reader") {
+        const readerInput = document.querySelector(`[data-reader-input="${teacherId}"]`);
+        const nextReaderId = String(readerInput?.value || "").trim();
+
+        await api("teachers-update", {
+          method: "POST",
+          body: JSON.stringify({ teacher_id: teacherId, reader_id: nextReaderId })
+        });
+
+        const selectedReader = nextReaderId
+          ? state.readers.find((reader) => reader.id === nextReaderId)
+          : null;
+
+        applyTeacherMutation(teacherId, (teacher) => {
+          teacher.reader_id = nextReaderId || null;
+          teacher.reader_name = selectedReader?.name || null;
+        });
+
+        refreshVisibleViews();
+        showToast(nextReaderId ? "تم نقل المعلم/المعلمة إلى المقرئ/المقرئة" : "تم إزالة ربط المقرئ/المقرئة");
       }
 
       if (action === "toggle-graduated") {
