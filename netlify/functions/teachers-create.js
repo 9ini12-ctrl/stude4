@@ -26,12 +26,22 @@ exports.handler = async (event) => {
     requireRoles(authUser, ["admin", "supervisor", "reader"]);
     const body = parseBody(event);
 
-    const name = String(body.name || "").trim();
+    const name = String(body.name || "").replace(/\s+/g, " ").trim();
     const requestedReaderId = body.reader_id ? String(body.reader_id).trim() : null;
     const requestedSupervisorId = body.supervisor_id ? String(body.supervisor_id).trim() : null;
 
     if (!name) {
       throw Object.assign(new Error("اسم المعلم / المعلمة مطلوب"), { statusCode: 400 });
+    }
+
+    const duplicateRes = await query(`
+      SELECT id
+      FROM teachers
+      WHERE lower(regexp_replace(trim(name), '[[:space:]]+', ' ', 'g')) = lower(regexp_replace(trim($1), '[[:space:]]+', ' ', 'g'))
+      LIMIT 1
+    `, [name]);
+    if (duplicateRes.rows[0]) {
+      throw Object.assign(new Error("اسم المعلم / المعلمة موجود مسبقًا"), { statusCode: 409 });
     }
 
     let supervisorId = authUser.id;

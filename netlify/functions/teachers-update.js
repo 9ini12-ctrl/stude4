@@ -50,8 +50,24 @@ exports.handler = async (event) => {
       }
     }
 
-    if (body.name) {
-      params.push(String(body.name).trim());
+    if (body.name !== undefined) {
+      const nextName = String(body.name || "").replace(/\s+/g, " ").trim();
+      if (!nextName) {
+        throw Object.assign(new Error("اسم المعلم / المعلمة مطلوب"), { statusCode: 400 });
+      }
+
+      const duplicateRes = await query(`
+        SELECT id
+        FROM teachers
+        WHERE id <> $2
+          AND lower(regexp_replace(trim(name), '[[:space:]]+', ' ', 'g')) = lower(regexp_replace(trim($1), '[[:space:]]+', ' ', 'g'))
+        LIMIT 1
+      `, [nextName, teacherId]);
+      if (duplicateRes.rows[0]) {
+        throw Object.assign(new Error("اسم المعلم / المعلمة موجود مسبقًا"), { statusCode: 409 });
+      }
+
+      params.push(nextName);
       updates.push(`name = $${params.length}`);
     }
 

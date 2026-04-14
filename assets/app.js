@@ -576,6 +576,7 @@ function renderTeacherList() {
   container.innerHTML = teachersSorted.map((teacher, index) => {
     const canManage = state.user.role === "admin" || state.user.role === "supervisor";
     const canReassignReader = state.user.role === "supervisor" && state.teacherViewMode === "report";
+    const canEditTeacherName = canManage && state.teacherViewMode === "report";
     const canSetPublicPin = canManage && state.teacherViewMode === "report";
     const eligibleReaders = canReassignReader
       ? state.readers.filter((reader) => reader.gender === teacher.gender)
@@ -645,8 +646,25 @@ function renderTeacherList() {
       </div>
     ` : "";
 
+    const nameEditControl = canEditTeacherName ? `
+      <div class="rounded-2xl border border-slate-200 bg-white p-3">
+        <label class="mb-2 block text-xs font-bold text-slate-600">تعديل اسم المعلم / المعلمة</label>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            data-name-input="${teacher.id}"
+            value="${teacher.name || ""}"
+            placeholder="الاسم الكامل"
+            class="soft-ring w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900"
+          />
+          <button type="button" data-action="save-name" data-teacher="${teacher.id}" class="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700 sm:shrink-0">حفظ الاسم</button>
+        </div>
+      </div>
+    ` : "";
+
     const actionButtons = `
       <div class="space-y-3">
+        ${nameEditControl}
         ${pinControl}
         ${readerTransferControl}
         <div class="flex flex-wrap gap-2">
@@ -1301,6 +1319,27 @@ async function initAppPage() {
         });
         refreshVisibleViews();
         showToast("تم تحديث المهمة");
+      }
+
+      if (action === "save-name") {
+        const nameInput = document.querySelector(`[data-name-input="${teacherId}"]`);
+        const nextName = String(nameInput?.value || "").replace(/\s+/g, " ").trim();
+
+        if (!nextName) {
+          throw new Error("اسم المعلم / المعلمة مطلوب");
+        }
+
+        await api("teachers-update", {
+          method: "POST",
+          body: JSON.stringify({ teacher_id: teacherId, name: nextName })
+        });
+
+        applyTeacherMutation(teacherId, (teacher) => {
+          teacher.name = nextName;
+        });
+
+        refreshVisibleViews();
+        showToast("تم تحديث الاسم");
       }
 
       if (action === "save-public-pin") {
